@@ -67,6 +67,10 @@ fn madison(package: String) -> String {
             .build()
             .with(Style::empty().vertical('|'))
             .to_string()
+            .lines()
+            .map(|line| line.trim())
+            .collect::<Vec<&str>>()
+            .join("\n")
     )
 }
 
