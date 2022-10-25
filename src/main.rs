@@ -8,8 +8,8 @@ use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
 
-#[get("/")]
-fn madison() -> &'static str {
+#[get("/?<package>")]
+fn madison(package: String) -> &'static str {
     // Setup the system
     let mut system = System::cache_only().unwrap();
     commands::add_builtin_keys(&mut system);
@@ -41,7 +41,7 @@ fn madison() -> &'static str {
                 } else {
                     &pkg.name
                 };
-                if resolved_source == "python3-defaults" {
+                if resolved_source == &package {
                     let key = downloaded_list.release.req.codename.to_owned();
                     if let Some(current_value) = versions.get_mut(&key) {
                         if deb_version::compare_versions(current_value, &pkg.version)
