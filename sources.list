@@ -6,3 +6,6 @@ deb http://ca.archive.ubuntu.com/ubuntu/ focal-updates main
 
 deb http://ca.archive.ubuntu.com/ubuntu/ jammy main
 deb http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
+
+deb http://ca.archive.ubuntu.com/ubuntu/ kinetic main
+deb http://ca.archive.ubuntu.com/ubuntu/ kinetic-updates main
