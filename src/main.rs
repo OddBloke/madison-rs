@@ -3,6 +3,11 @@ extern crate rocket;
 
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::BufReader;
+
+use rocket::fairing::AdHoc;
+use rocket::serde::Deserialize;
 
 use fapt::commands;
 use fapt::sources_list;
@@ -10,17 +15,24 @@ use fapt::system::System;
 
 use tabled::{builder::Builder, Style};
 
-const SOURCES_LIST: &str = "
-deb http://ca.archive.ubuntu.com/ubuntu/ jammy main
-deb http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
-";
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct Config {
+    sources_list: String,
+}
 
 #[get("/?<package>")]
-fn madison(package: String) -> Result<String, rocket::response::Debug<anyhow::Error>> {
+fn madison(
+    package: String,
+    config: &rocket::State<Config>,
+) -> Result<String, rocket::response::Debug<anyhow::Error>> {
     // Setup the system
     let mut system = System::cache_only()?;
     commands::add_builtin_keys(&mut system);
-    commands::add_sources_entries_from_str(&mut system, SOURCES_LIST)?;
+    system.add_sources_entries(sources_list::read(BufReader::new(
+        File::open(&config.sources_list).unwrap(),
+    ))?);
+
     system.set_arches(vec!["amd64"]);
     system.update()?;
 
@@ -76,5 +88,7 @@ fn madison(package: String) -> Result<String, rocket::response::Debug<anyhow::Er
 
 #[launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![madison])
+    rocket::build()
+        .mount("/", routes![madison])
+        .attach(AdHoc::config::<Config>())
 }
