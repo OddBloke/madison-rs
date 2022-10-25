@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 
-use rocket::fairing::AdHoc;
 use rocket::serde::Deserialize;
 
 use fapt::commands;
@@ -21,19 +20,16 @@ struct Config {
     sources_list: String,
 }
 
+struct MadisonState {
+    system: System,
+}
+
 #[get("/?<package>")]
 fn madison(
     package: String,
-    config: &rocket::State<Config>,
+    state: &rocket::State<MadisonState>,
 ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
-    // Setup the system
-    let mut system = System::cache_only()?;
-    commands::add_builtin_keys(&mut system);
-    system.add_sources_entries(sources_list::read(BufReader::new(
-        File::open(&config.sources_list).unwrap(),
-    ))?);
-
-    system.set_arches(vec!["amd64"]);
+    let system = &state.system;
     system.update()?;
 
     // Collect all the versions
@@ -90,9 +86,28 @@ fn madison(
     ))
 }
 
+fn init_system(config: Config) -> Result<System, anyhow::Error> {
+    // Setup the system
+    let mut system = System::cache_only()?;
+    commands::add_builtin_keys(&mut system);
+    system.add_sources_entries(sources_list::read(BufReader::new(
+        File::open(&config.sources_list).unwrap(),
+    ))?);
+
+    system.set_arches(vec!["amd64"]);
+    system.update()?;
+    Ok(system)
+}
+
 #[launch]
 fn rocket() -> _ {
-    rocket::build()
+    let rocket = rocket::build();
+    let figment = rocket.figment();
+    let config: Config = figment.extract().expect("config");
+
+    let system = init_system(config).expect("fapt System init");
+
+    rocket
         .mount("/", routes![madison])
-        .attach(AdHoc::config::<Config>())
+        .manage(MadisonState { system })
 }
