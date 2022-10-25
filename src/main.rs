@@ -16,19 +16,19 @@ deb http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
 ";
 
 #[get("/?<package>")]
-fn madison(package: String) -> String {
+fn madison(package: String) -> Result<String, rocket::response::Debug<anyhow::Error>> {
     // Setup the system
-    let mut system = System::cache_only().unwrap();
+    let mut system = System::cache_only()?;
     commands::add_builtin_keys(&mut system);
-    commands::add_sources_entries_from_str(&mut system, SOURCES_LIST).unwrap();
+    commands::add_sources_entries_from_str(&mut system, SOURCES_LIST)?;
     system.set_arches(vec!["amd64"]);
-    system.update().unwrap();
+    system.update()?;
 
     // Collect all the versions
     let mut versions: HashMap<String, String> = HashMap::new();
-    for downloaded_list in system.listings().unwrap() {
-        for section in system.open_listing(&downloaded_list).unwrap() {
-            let pkg = section.unwrap().as_pkg().unwrap();
+    for downloaded_list in system.listings()? {
+        for section in system.open_listing(&downloaded_list)? {
+            let pkg = section?.as_pkg()?;
             if let Some(bin) = pkg.as_bin() {
                 let resolved_source = if let Some(bin_src) = &bin.source {
                     bin_src
@@ -61,7 +61,7 @@ fn madison(package: String) -> String {
             "source".to_string(),
         ]);
     }
-    format!(
+    Ok(format!(
         "{}\n",
         output_builder
             .build()
@@ -71,7 +71,7 @@ fn madison(package: String) -> String {
             .map(|line| line.trim())
             .collect::<Vec<&str>>()
             .join("\n")
-    )
+    ))
 }
 
 #[launch]
