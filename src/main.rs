@@ -65,7 +65,11 @@ fn madison(
     println!("{:?}", versions);
 
     let mut output_builder = Builder::default();
-    for (codename, codename_version) in versions.iter() {
+    let mut sorted_by_version: Vec<_> = versions.iter().collect();
+
+    sorted_by_version.sort_by(|(_, v1), (_, v2)| deb_version::compare_versions(v1, v2));
+
+    for (codename, codename_version) in sorted_by_version {
         output_builder.add_record(vec![
             package.to_owned(),
             codename_version.to_owned(),
