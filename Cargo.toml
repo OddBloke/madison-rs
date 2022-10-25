@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 anyhow = "*"
 deb-version = "*"
-fapt = { path = "../fapt" }
+fapt = { git = "https://github.com/OddBloke/fapt", branch = "codename" }
 rocket = "0.5.0-rc.2"
 tabled = "*"
