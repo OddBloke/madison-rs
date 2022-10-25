@@ -8,25 +8,17 @@ use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
 
+const SOURCES_LIST: &str = "
+deb http://ca.archive.ubuntu.com/ubuntu/ jammy main
+deb http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
+";
+
 #[get("/?<package>")]
 fn madison(package: String) -> &'static str {
     // Setup the system
     let mut system = System::cache_only().unwrap();
     commands::add_builtin_keys(&mut system);
-    system.add_sources_entries(vec![sources_list::Entry {
-        src: false,
-        url: "http://ca.archive.ubuntu.com/ubuntu/".to_string(),
-        suite_codename: "jammy".to_string(),
-        components: vec!["main".to_string()],
-        arch: None,
-    }]);
-    system.add_sources_entries(vec![sources_list::Entry {
-        src: false,
-        url: "http://ca.archive.ubuntu.com/ubuntu/".to_string(),
-        suite_codename: "jammy-updates".to_string(),
-        components: vec!["main".to_string()],
-        arch: None,
-    }]);
+    commands::add_sources_entries_from_str(&mut system, SOURCES_LIST).unwrap();
     system.set_arches(vec!["amd64"]);
     system.update().unwrap();
 
