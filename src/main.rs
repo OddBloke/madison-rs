@@ -8,13 +8,15 @@ use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
 
+use tabled::{builder::Builder, Style};
+
 const SOURCES_LIST: &str = "
 deb http://ca.archive.ubuntu.com/ubuntu/ jammy main
 deb http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
 ";
 
 #[get("/?<package>")]
-fn madison(package: String) -> &'static str {
+fn madison(package: String) -> String {
     // Setup the system
     let mut system = System::cache_only().unwrap();
     commands::add_builtin_keys(&mut system);
@@ -50,7 +52,22 @@ fn madison(package: String) -> &'static str {
     }
     println!("{:?}", versions);
 
-    "Hello, world!"
+    let mut output_builder = Builder::default();
+    for (codename, codename_version) in versions.iter() {
+        output_builder.add_record(vec![
+            package.to_owned(),
+            codename_version.to_owned(),
+            codename.to_owned(),
+            "source".to_string(),
+        ]);
+    }
+    format!(
+        "{}\n",
+        output_builder
+            .build()
+            .with(Style::empty().vertical('|'))
+            .to_string()
+    )
 }
 
 #[launch]
