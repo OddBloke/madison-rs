@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 
+use log::info;
+
 use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
@@ -49,7 +51,7 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
             }
         }
     }
-    println!("{:?}", versions);
+    info!("{:?}", versions);
 
     let mut output_builder = Builder::default();
     let mut sorted_by_version: Vec<_> = versions.iter().collect();
