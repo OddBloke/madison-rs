@@ -1,17 +1,9 @@
 #[macro_use]
 extern crate rocket;
 
-use rocket::serde::Deserialize;
-
 use fapt::system::System;
 
-use madison_rs::{do_madison, init_system};
-
-#[derive(Deserialize)]
-#[serde(crate = "rocket::serde")]
-struct Config {
-    sources_list: String,
-}
+use madison_rs::{do_madison, init_system, MadisonConfig};
 
 struct MadisonState {
     system: System,
@@ -31,7 +23,7 @@ fn madison(
 fn rocket() -> _ {
     let rocket = rocket::build();
     let figment = rocket.figment();
-    let config: Config = figment.extract().expect("config");
+    let config: MadisonConfig = figment.extract().expect("config");
 
     let system = init_system(config.sources_list).expect("fapt System init");
 

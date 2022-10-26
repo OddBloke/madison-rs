@@ -11,6 +11,13 @@ use fapt::system::System;
 
 use tabled::{builder::Builder, Style};
 
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+pub struct MadisonConfig {
+    pub sources_list: String,
+}
+
 pub fn init_system(sources_list: String) -> Result<System, anyhow::Error> {
     // Setup the system
     let mut system = System::cache_only()?;

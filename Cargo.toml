@@ -9,6 +9,8 @@ edition = "2021"
 anyhow = "*"
 deb-version = "*"
 fapt = { git = "https://github.com/OddBloke/fapt", branch = "codename" }
+figment = "*"
 log = "*"
 rocket = "0.5.0-rc.2"
+serde = "*"
 tabled = "*"
