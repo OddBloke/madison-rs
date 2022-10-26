@@ -25,7 +25,7 @@ fn rocket() -> _ {
     let figment = rocket.figment();
     let config: MadisonConfig = figment.extract().expect("config");
 
-    let system = init_system(config.sources_list).expect("fapt System init");
+    let system = init_system(config).expect("fapt System init");
 
     rocket
         .mount("/", routes![madison])

@@ -16,7 +16,7 @@ fn main() {
         .extract()
         .expect("reading Rocket.toml configuration");
 
-    let system = init_system(config.global.sources_list).expect("fapt System init");
+    let system = init_system(config.global).expect("fapt System init");
     print!(
         "{}",
         do_madison(package, &system).expect("generating madison table")

@@ -18,12 +18,12 @@ pub struct MadisonConfig {
     pub sources_list: String,
 }
 
-pub fn init_system(sources_list: String) -> Result<System, anyhow::Error> {
+pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
     // Setup the system
     let mut system = System::cache_only()?;
     commands::add_builtin_keys(&mut system);
     system.add_sources_entries(sources_list::read(BufReader::new(
-        File::open(&sources_list).unwrap(),
+        File::open(&config.sources_list).unwrap(),
     ))?);
 
     system.set_arches(vec!["amd64"]);
