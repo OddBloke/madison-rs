@@ -34,7 +34,7 @@ pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
 pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Error> {
     // Collect all the versions
     let mut versions: HashMap<String, String> = HashMap::new();
-    for downloaded_list in system.listings()? {
+    system.listings()?.iter().map(|downloaded_list| -> Result<(), anyhow::Error> {
         for section in system.open_listing(&downloaded_list)? {
             let pkg = section?.as_pkg()?;
             if let Some(bin) = pkg.as_bin() {
@@ -52,12 +52,13 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
                             *current_value = pkg.version.to_owned();
                         }
                     } else {
-                        versions.insert(key, pkg.version.to_owned());
+                        versions.insert(key.clone(), pkg.version.to_owned());
                     }
                 }
             }
         }
-    }
+        Ok(())
+    }).for_each(drop);
     info!("{:?}", versions);
 
     let mut output_builder = Builder::default();
