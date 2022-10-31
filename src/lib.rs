@@ -33,32 +33,46 @@ pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
 
 pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Error> {
     // Collect all the versions
-    let mut versions: HashMap<String, String> = HashMap::new();
-    system.listings()?.iter().map(|downloaded_list| -> Result<(), anyhow::Error> {
-        for section in system.open_listing(&downloaded_list)? {
-            let pkg = section?.as_pkg()?;
-            if let Some(bin) = pkg.as_bin() {
-                let resolved_source = if let Some(bin_src) = &bin.source {
-                    bin_src
-                } else {
-                    &pkg.name
-                };
-                if resolved_source == &package {
-                    let key = downloaded_list.release.req.codename.to_owned();
-                    if let Some(current_value) = versions.get_mut(&key) {
-                        if deb_version::compare_versions(current_value, &pkg.version)
-                            == Ordering::Greater
-                        {
-                            *current_value = pkg.version.to_owned();
+    let versions: HashMap<String, String> = system
+        .listings()?
+        .iter()
+        .map(
+            |downloaded_list| -> Result<(String, Option<String>), anyhow::Error> {
+                let key = downloaded_list.release.req.codename.to_owned();
+                let mut version: Option<String> = None;
+                for section in system.open_listing(&downloaded_list)? {
+                    let pkg = section?.as_pkg()?;
+                    if let Some(bin) = pkg.as_bin() {
+                        let resolved_source = if let Some(bin_src) = &bin.source {
+                            bin_src
+                        } else {
+                            &pkg.name
+                        };
+                        if resolved_source == &package {
+                            if let Some(current_value) = &version {
+                                if deb_version::compare_versions(&current_value, &pkg.version)
+                                    == Ordering::Greater
+                                {
+                                    version = Some(pkg.version);
+                                }
+                            } else {
+                                version = Some(pkg.version);
+                            }
                         }
-                    } else {
-                        versions.insert(key.clone(), pkg.version.to_owned());
                     }
                 }
+                Ok((key, version))
+            },
+        )
+        .filter_map(|res| res.ok())
+        .filter_map(|(key, version)| {
+            if let Some(version) = version {
+                Some((key, version))
+            } else {
+                None
             }
-        }
-        Ok(())
-    }).for_each(drop);
+        })
+        .collect();
     info!("{:?}", versions);
 
     let mut output_builder = Builder::default();
@@ -69,8 +83,8 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
     for (codename, codename_version) in sorted_by_version {
         output_builder.add_record(vec![
             package.to_owned(),
-            codename_version.to_owned(),
-            codename.to_owned(),
+            codename_version.to_string(),
+            codename.to_string(),
             "source".to_string(),
         ]);
     }
