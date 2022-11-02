@@ -10,6 +10,7 @@ deb-version = "*"
 fapt = { git = "https://github.com/OddBloke/fapt", branch = "codename" }
 figment = "*"
 log = "*"
+rayon = "*"
 rocket = "0.5.0-rc.2"
 serde = "*"
 tabled = "*"

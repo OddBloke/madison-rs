@@ -13,6 +13,8 @@ use tabled::{builder::Builder, Style};
 
 use serde::Deserialize;
 
+use rayon::prelude::*;
+
 #[derive(Deserialize)]
 pub struct MadisonConfig {
     pub sources_list: String,
@@ -35,7 +37,7 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
     // Collect all the versions
     let versions: HashMap<String, String> = system
         .listings()?
-        .iter()
+        .par_iter()
         .map(
             |downloaded_list| -> Result<(String, Option<String>), anyhow::Error> {
                 let key = downloaded_list.release.req.codename.to_owned();
