@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate rocket;
+
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
@@ -143,5 +146,40 @@ pub mod madison_cli {
             "{}",
             do_madison(package, &system, key_func).expect("generating madison table")
         );
+    }
+}
+
+pub mod madison_web {
+
+    use fapt::system::System;
+    use rocket::{Build, Rocket};
+
+    use crate::{do_madison, init_system, key_func, MadisonConfig};
+
+    struct MadisonState {
+        key_func: &'static key_func::KeyFunc,
+        system: System,
+    }
+
+    #[get("/?<package>")]
+    fn madison(
+        package: String,
+        state: &rocket::State<MadisonState>,
+    ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
+        let system = &state.system;
+        system.update()?;
+        Ok(do_madison(package, system, &state.key_func)?)
+    }
+
+    pub fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
+        let rocket = rocket::build();
+        let figment = rocket.figment();
+        let config: MadisonConfig = figment.extract().expect("config");
+
+        let system = init_system(config).expect("fapt System init");
+
+        rocket
+            .mount("/", routes![madison])
+            .manage(MadisonState { key_func, system })
     }
 }
