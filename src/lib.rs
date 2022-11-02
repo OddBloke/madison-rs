@@ -2,6 +2,7 @@
 extern crate rocket;
 
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 
@@ -49,17 +50,25 @@ pub fn do_madison(
         .listings()?
         .par_iter()
         .map(|downloaded_list| -> Result<_, anyhow::Error> {
+            let mut types = HashSet::new();
             let key = key_func(downloaded_list);
             let mut version: Option<String> = None;
             for section in system.open_listing(downloaded_list)? {
                 let pkg = section?.as_pkg()?;
                 if let Some(bin) = pkg.as_bin() {
-                    let resolved_source = if let Some(bin_src) = &bin.source {
-                        bin_src
+                    let pkg_type = if bin.source.as_ref() == Some(&package) {
+                        Some("source".to_string())
+                    } else if pkg.name == package {
+                        downloaded_list
+                            .listing
+                            .arch
+                            .as_ref()
+                            .map_or(Some("unknown!".to_string()), |arch| Some(arch.to_owned()))
                     } else {
-                        &pkg.name
+                        None
                     };
-                    if resolved_source == &package {
+                    if let Some(pkg_type) = pkg_type {
+                        types.insert(pkg_type);
                         if let Some(current_value) = &version {
                             if deb_version::compare_versions(&pkg.version, current_value)
                                 == Ordering::Greater
@@ -72,11 +81,11 @@ pub fn do_madison(
                     }
                 }
             }
-            Ok((key, version))
+            Ok((key, version, types))
         })
         .filter_map(|res| {
-            if let Ok((name, version)) = res {
-                version.map(|version| Ok((name, version)))
+            if let Ok((name, version, types)) = res {
+                version.map(|version| Ok((name, version, types)))
             } else {
                 Some(Err(res.expect_err("unreachable")))
             }
@@ -84,15 +93,15 @@ pub fn do_madison(
         .collect::<Result<_, _>>()?;
     info!("{:?}", versions);
 
-    versions.sort_by(|(_, v1), (_, v2)| deb_version::compare_versions(v1, v2));
+    versions.sort_by(|(_, v1, _), (_, v2, _)| deb_version::compare_versions(v1, v2));
 
     let mut output_builder = Builder::default();
-    for (codename, codename_version) in versions {
+    for (codename, codename_version, types) in versions {
         output_builder.add_record(vec![
             package.to_owned(),
             codename_version.to_string(),
             codename.to_string(),
-            "source".to_string(),
+            types.into_iter().collect::<Vec<_>>().join(", "),
         ]);
     }
     Ok(format!(
