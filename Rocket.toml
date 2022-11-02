@@ -1,2 +1,3 @@
 [global]
 sources_list = "./sources.list"
+extra_key_paths = []

@@ -18,11 +18,15 @@ use rayon::prelude::*;
 #[derive(Deserialize)]
 pub struct MadisonConfig {
     pub sources_list: String,
+    pub extra_key_paths: Vec<String>,
 }
 
 pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
     // Setup the system
     let mut system = System::cache_only()?;
+    for path in config.extra_key_paths {
+        system.add_keys_from(File::open(path)?)?;
+    }
     commands::add_builtin_keys(&mut system);
     system.add_sources_entries(sources_list::read(BufReader::new(
         File::open(&config.sources_list).unwrap(),
