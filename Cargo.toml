@@ -7,7 +7,7 @@ default-run = "madison-web"
 [dependencies]
 anyhow = "*"
 deb-version = "*"
-fapt = { git = "https://github.com/OddBloke/fapt", branch = "codename" }
+fapt = { git = "https://github.com/OddBloke/fapt", branch = "master" }
 figment = "*"
 log = "*"
 rayon = "*"
