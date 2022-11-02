@@ -2,7 +2,6 @@
 extern crate rocket;
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 
@@ -46,7 +45,7 @@ pub fn do_madison(
     key_func: &key_func::KeyFunc,
 ) -> Result<String, anyhow::Error> {
     // Collect all the versions
-    let versions: HashMap<String, String> = system
+    let versions: Vec<_> = system
         .listings()?
         .par_iter()
         .map(
@@ -77,9 +76,14 @@ pub fn do_madison(
                 Ok((key, version))
             },
         )
-        .filter_map(|res| res.ok())
-        .filter_map(|(key, version)| version.map(|version| (key, version)))
-        .collect();
+        .filter_map(|res| {
+            if let Ok((name, version)) = res {
+                version.map(|version| Ok((name, version)))
+            } else {
+                Some(Err(res.expect_err("unreachable")))
+            }
+        })
+        .collect::<Result<_, _>>()?;
     info!("{:?}", versions);
 
     let mut output_builder = Builder::default();
