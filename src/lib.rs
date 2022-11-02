@@ -2,6 +2,7 @@
 extern crate rocket;
 
 use std::cmp::Ordering;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
@@ -46,7 +47,7 @@ pub fn do_madison(
     key_func: &key_func::KeyFunc,
 ) -> Result<String, anyhow::Error> {
     // Collect all the versions
-    let mut versions: Vec<_> = system
+    let versions: Vec<_> = system
         .listings()?
         .par_iter()
         .map(|downloaded_list| -> Result<_, anyhow::Error> {
@@ -93,15 +94,26 @@ pub fn do_madison(
         .collect::<Result<_, _>>()?;
     info!("{:?}", versions);
 
-    versions.sort_by(
-        |(codename1, v1, _), (codename2, v2, _)| match deb_version::compare_versions(v1, v2) {
+    let mut merged_versions: HashMap<(String, String), HashSet<_>> = HashMap::new();
+    for (codename, codename_version, types) in versions {
+        let key = (codename, codename_version);
+        if let Some(current_value) = merged_versions.get_mut(&key) {
+            (*current_value).extend(types);
+        } else {
+            merged_versions.insert(key, types);
+        }
+    }
+
+    let mut merged_vec = merged_versions.into_iter().collect::<Vec<_>>();
+    merged_vec.sort_by(|((codename1, v1), _), ((codename2, v2), _)| {
+        match deb_version::compare_versions(v1, v2) {
             Ordering::Equal => codename1.cmp(codename2),
             other => other,
-        },
-    );
+        }
+    });
 
     let mut output_builder = Builder::default();
-    for (codename, codename_version, mut types) in versions {
+    for ((codename, codename_version), mut types) in merged_vec {
         // Start with "source", append sorted architectures, join with ", "
         let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
         let mut arch_parts = types.into_iter().collect::<Vec<_>>();
