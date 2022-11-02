@@ -2,7 +2,7 @@ use figment::providers::{Format, Toml};
 use figment::Figment;
 use serde::Deserialize;
 
-use madison_rs::{do_madison, init_system, MadisonConfig};
+use madison_rs::{do_madison, init_system, key_func, MadisonConfig};
 
 #[derive(Deserialize)]
 struct CliConfig {
@@ -19,6 +19,6 @@ fn main() {
     let system = init_system(config.global).expect("fapt System init");
     print!(
         "{}",
-        do_madison(package, &system).expect("generating madison table")
+        do_madison(package, &system, &key_func::codename).expect("generating madison table")
     );
 }

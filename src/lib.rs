@@ -37,14 +37,18 @@ pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
     Ok(system)
 }
 
-pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Error> {
+pub fn do_madison(
+    package: String,
+    system: &System,
+    key_func: &key_func::KeyFunc,
+) -> Result<String, anyhow::Error> {
     // Collect all the versions
     let versions: HashMap<String, String> = system
         .listings()?
         .par_iter()
         .map(
             |downloaded_list| -> Result<(String, Option<String>), anyhow::Error> {
-                let key = downloaded_list.release.req.codename.to_owned();
+                let key = key_func(downloaded_list);
                 let mut version: Option<String> = None;
                 for section in system.open_listing(downloaded_list)? {
                     let pkg = section?.as_pkg()?;
@@ -99,4 +103,18 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
             .collect::<Vec<&str>>()
             .join("\n")
     ))
+}
+
+pub mod key_func {
+    use fapt::system::DownloadedList;
+
+    pub type KeyFunc = dyn Fn(&DownloadedList) -> String + Sync + 'static;
+
+    pub fn codename(list: &DownloadedList) -> String {
+        list.release.req.codename.to_owned()
+    }
+
+    pub fn component(list: &DownloadedList) -> String {
+        list.listing.component.to_owned()
+    }
 }

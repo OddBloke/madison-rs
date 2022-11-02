@@ -3,7 +3,7 @@ extern crate rocket;
 
 use fapt::system::System;
 
-use madison_rs::{do_madison, init_system, MadisonConfig};
+use madison_rs::{do_madison, init_system, key_func, MadisonConfig};
 
 struct MadisonState {
     system: System,
@@ -16,7 +16,7 @@ fn madison(
 ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
     let system = &state.system;
     system.update()?;
-    Ok(do_madison(package, system)?)
+    Ok(do_madison(package, system, &key_func::codename)?)
 }
 
 #[launch]
