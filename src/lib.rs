@@ -93,7 +93,12 @@ pub fn do_madison(
         .collect::<Result<_, _>>()?;
     info!("{:?}", versions);
 
-    versions.sort_by(|(_, v1, _), (_, v2, _)| deb_version::compare_versions(v1, v2));
+    versions.sort_by(
+        |(codename1, v1, _), (codename2, v2, _)| match deb_version::compare_versions(v1, v2) {
+            Ordering::Equal => codename1.cmp(codename2),
+            other => other,
+        },
+    );
 
     let mut output_builder = Builder::default();
     for (codename, codename_version, mut types) in versions {
