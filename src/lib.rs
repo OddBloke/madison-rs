@@ -23,6 +23,7 @@ use rayon::prelude::*;
 pub struct MadisonConfig {
     pub sources_list: String,
     pub extra_key_paths: Vec<String>,
+    pub arches: Vec<String>,
 }
 
 pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
@@ -36,7 +37,7 @@ pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
         File::open(&config.sources_list).unwrap(),
     ))?);
 
-    system.set_arches(vec!["amd64"]);
+    system.set_arches(config.arches);
     system.update()?;
     Ok(system)
 }
