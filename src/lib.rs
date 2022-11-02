@@ -45,7 +45,7 @@ pub fn do_madison(
     key_func: &key_func::KeyFunc,
 ) -> Result<String, anyhow::Error> {
     // Collect all the versions
-    let versions: Vec<_> = system
+    let mut versions: Vec<_> = system
         .listings()?
         .par_iter()
         .map(
@@ -86,12 +86,10 @@ pub fn do_madison(
         .collect::<Result<_, _>>()?;
     info!("{:?}", versions);
 
+    versions.sort_by(|(_, v1), (_, v2)| deb_version::compare_versions(v1, v2));
+
     let mut output_builder = Builder::default();
-    let mut sorted_by_version: Vec<_> = versions.iter().collect();
-
-    sorted_by_version.sort_by(|(_, v1), (_, v2)| deb_version::compare_versions(v1, v2));
-
-    for (codename, codename_version) in sorted_by_version {
+    for (codename, codename_version) in versions {
         output_builder.add_record(vec![
             package.to_owned(),
             codename_version.to_string(),
