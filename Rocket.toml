@@ -1,4 +1,12 @@
 [global]
 sources_list = "./sources.list"
 extra_key_paths = []
-arches = ["amd64"]
+arches = [
+     "amd64",
+     "arm64",
+     "armhf",
+     "i386",
+     "ppc64el",
+     "riscv64",
+     "s390x",
+]
