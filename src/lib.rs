@@ -63,7 +63,7 @@ pub fn do_madison(
                         };
                         if resolved_source == &package {
                             if let Some(current_value) = &version {
-                                if deb_version::compare_versions(current_value, &pkg.version)
+                                if deb_version::compare_versions(&pkg.version, current_value)
                                     == Ordering::Greater
                                 {
                                     version = Some(pkg.version);
