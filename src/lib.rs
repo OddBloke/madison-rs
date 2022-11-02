@@ -46,7 +46,7 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
             |downloaded_list| -> Result<(String, Option<String>), anyhow::Error> {
                 let key = downloaded_list.release.req.codename.to_owned();
                 let mut version: Option<String> = None;
-                for section in system.open_listing(&downloaded_list)? {
+                for section in system.open_listing(downloaded_list)? {
                     let pkg = section?.as_pkg()?;
                     if let Some(bin) = pkg.as_bin() {
                         let resolved_source = if let Some(bin_src) = &bin.source {
@@ -56,7 +56,7 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
                         };
                         if resolved_source == &package {
                             if let Some(current_value) = &version {
-                                if deb_version::compare_versions(&current_value, &pkg.version)
+                                if deb_version::compare_versions(current_value, &pkg.version)
                                     == Ordering::Greater
                                 {
                                     version = Some(pkg.version);
@@ -71,13 +71,7 @@ pub fn do_madison(package: String, system: &System) -> Result<String, anyhow::Er
             },
         )
         .filter_map(|res| res.ok())
-        .filter_map(|(key, version)| {
-            if let Some(version) = version {
-                Some((key, version))
-            } else {
-                None
-            }
-        })
+        .filter_map(|(key, version)| version.map(|version| (key, version)))
         .collect();
     info!("{:?}", versions);
 
