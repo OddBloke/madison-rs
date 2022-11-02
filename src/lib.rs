@@ -96,12 +96,19 @@ pub fn do_madison(
     versions.sort_by(|(_, v1, _), (_, v2, _)| deb_version::compare_versions(v1, v2));
 
     let mut output_builder = Builder::default();
-    for (codename, codename_version, types) in versions {
+    for (codename, codename_version, mut types) in versions {
+        // Start with "source", append sorted architectures, join with ", "
+        let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
+        let mut arch_parts = types.into_iter().collect::<Vec<_>>();
+        arch_parts.sort();
+        type_parts.extend(arch_parts);
+        let type_output = type_parts.join(", ");
+
         output_builder.add_record(vec![
             package.to_owned(),
             codename_version.to_string(),
             codename.to_string(),
-            types.into_iter().collect::<Vec<_>>().join(", "),
+            type_output,
         ]);
     }
     Ok(format!(
