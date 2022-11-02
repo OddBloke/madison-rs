@@ -48,34 +48,32 @@ pub fn do_madison(
     let mut versions: Vec<_> = system
         .listings()?
         .par_iter()
-        .map(
-            |downloaded_list| -> Result<(String, Option<String>), anyhow::Error> {
-                let key = key_func(downloaded_list);
-                let mut version: Option<String> = None;
-                for section in system.open_listing(downloaded_list)? {
-                    let pkg = section?.as_pkg()?;
-                    if let Some(bin) = pkg.as_bin() {
-                        let resolved_source = if let Some(bin_src) = &bin.source {
-                            bin_src
-                        } else {
-                            &pkg.name
-                        };
-                        if resolved_source == &package {
-                            if let Some(current_value) = &version {
-                                if deb_version::compare_versions(&pkg.version, current_value)
-                                    == Ordering::Greater
-                                {
-                                    version = Some(pkg.version);
-                                }
-                            } else {
+        .map(|downloaded_list| -> Result<_, anyhow::Error> {
+            let key = key_func(downloaded_list);
+            let mut version: Option<String> = None;
+            for section in system.open_listing(downloaded_list)? {
+                let pkg = section?.as_pkg()?;
+                if let Some(bin) = pkg.as_bin() {
+                    let resolved_source = if let Some(bin_src) = &bin.source {
+                        bin_src
+                    } else {
+                        &pkg.name
+                    };
+                    if resolved_source == &package {
+                        if let Some(current_value) = &version {
+                            if deb_version::compare_versions(&pkg.version, current_value)
+                                == Ordering::Greater
+                            {
                                 version = Some(pkg.version);
                             }
+                        } else {
+                            version = Some(pkg.version);
                         }
                     }
                 }
-                Ok((key, version))
-            },
-        )
+            }
+            Ok((key, version))
+        })
         .filter_map(|res| {
             if let Ok((name, version)) = res {
                 version.map(|version| Ok((name, version)))
