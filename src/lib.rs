@@ -118,3 +118,30 @@ pub mod key_func {
         list.listing.component.to_owned()
     }
 }
+
+pub mod madison_cli {
+    use figment::providers::{Format, Toml};
+    use figment::Figment;
+    use serde::Deserialize;
+
+    use crate::{do_madison, init_system, key_func, MadisonConfig};
+
+    #[derive(Deserialize)]
+    struct CliConfig {
+        global: MadisonConfig,
+    }
+
+    pub fn cli(key_func: &key_func::KeyFunc) {
+        let package = std::env::args().nth(1).expect("no package name given");
+        let config: CliConfig = Figment::new()
+            .merge(Toml::file("Rocket.toml"))
+            .extract()
+            .expect("reading Rocket.toml configuration");
+
+        let system = init_system(config.global).expect("fapt System init");
+        print!(
+            "{}",
+            do_madison(package, &system, key_func).expect("generating madison table")
+        );
+    }
+}
