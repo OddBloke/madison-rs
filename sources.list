@@ -13,3 +13,7 @@ deb http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
 deb http://ca.archive.ubuntu.com/ubuntu/ kinetic main
 deb http://ca.archive.ubuntu.com/ubuntu/ kinetic-security main
 deb http://ca.archive.ubuntu.com/ubuntu/ kinetic-updates main
+
+deb http://ca.archive.ubuntu.com/ubuntu/ lunar main
+deb http://ca.archive.ubuntu.com/ubuntu/ lunar-security main
+deb http://ca.archive.ubuntu.com/ubuntu/ lunar-updates main
