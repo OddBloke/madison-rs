@@ -1,145 +1,40 @@
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ bionic main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ bionic-security main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ bionic-updates main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ bionic main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ bionic-security main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ bionic-updates main
 
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ focal main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ focal-security main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ focal-updates main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ focal main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ focal-security main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ focal-updates main
 
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ jammy main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ jammy-security main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ jammy main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ jammy-security main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
 
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ kinetic main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ kinetic-security main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ kinetic-updates main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ kinetic main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ kinetic-security main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ kinetic-updates main
 
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ lunar main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ lunar-security main
-deb [arch=amd64] http://ca.archive.ubuntu.com/ubuntu/ lunar-updates main
-
-
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ bionic main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ bionic-security main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ bionic-updates main
-
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ focal main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ focal-security main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ focal-updates main
-
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ jammy main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ jammy-security main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ jammy-updates main
-
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ kinetic main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ kinetic-security main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ kinetic-updates main
-
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ lunar main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ lunar-security main
-deb [arch=i386] http://ca.archive.ubuntu.com/ubuntu/ lunar-updates main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ lunar main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ lunar-security main
+deb [arch=amd64,i386] http://ca.archive.ubuntu.com/ubuntu/ lunar-updates main
 
 
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ bionic main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ bionic-security main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ bionic-updates main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ bionic main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ bionic-security main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ bionic-updates main
 
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ focal main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ focal-security main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ focal main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ focal-security main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main
 
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ jammy main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
 
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ kinetic main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ kinetic-security main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ kinetic-updates main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ kinetic main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ kinetic-security main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ kinetic-updates main
 
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ lunar main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ lunar-security main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ lunar-updates main
-
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ bionic main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ bionic-security main
-deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ bionic-updates main
-
-
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ focal main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ focal-security main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main
-
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ jammy main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
-
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ kinetic main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ kinetic-security main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ kinetic-updates main
-
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ lunar main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ lunar-security main
-deb [arch=riscv64] http://ports.ubuntu.com/ubuntu-ports/ lunar-updates main
-
-
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ bionic main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ bionic-security main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ bionic-updates main
-
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ focal main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ focal-security main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main
-
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ jammy main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
-
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ kinetic main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ kinetic-security main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ kinetic-updates main
-
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ lunar main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ lunar-security main
-deb [arch=s390x] http://ports.ubuntu.com/ubuntu-ports/ lunar-updates main
-
-
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ bionic main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ bionic-security main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ bionic-updates main
-
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ focal main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ focal-security main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main
-
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ jammy main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
-
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ kinetic main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ kinetic-security main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ kinetic-updates main
-
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ lunar main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ lunar-security main
-deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports/ lunar-updates main
-
-
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ bionic main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ bionic-security main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ bionic-updates main
-
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ focal main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ focal-security main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ focal-updates main
-
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ jammy main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ jammy-security main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ jammy-updates main
-
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ kinetic main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ kinetic-security main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ kinetic-updates main
-
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ lunar main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ lunar-security main
-deb [arch=ppc64el] http://ports.ubuntu.com/ubuntu-ports/ lunar-updates main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ lunar main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ lunar-security main
+deb [arch=arm64,armhf,ppc64el,riscv64,s390x] http://ports.ubuntu.com/ubuntu-ports/ lunar-updates main
