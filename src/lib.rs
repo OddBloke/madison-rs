@@ -13,7 +13,7 @@ use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
 
-use tabled::{builder::Builder, Style};
+use tabled::{builder::Builder, settings::Style};
 
 use serde::Deserialize;
 
@@ -122,7 +122,7 @@ pub fn do_madison(
         type_parts.extend(arch_parts);
         let type_output = type_parts.join(", ");
 
-        output_builder.add_record(vec![
+        output_builder.push_record(vec![
             package.to_owned(),
             codename_version.to_string(),
             codename.to_string(),
