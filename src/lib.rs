@@ -43,7 +43,7 @@ pub async fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error>
 }
 
 pub fn do_madison(
-    package: String,
+    package: &String,
     system: &System,
     key_func: &key_func::KeyFunc,
 ) -> Result<String, anyhow::Error> {
@@ -60,7 +60,7 @@ pub fn do_madison(
                 if let Some(bin) = pkg.as_bin() {
                     let pkg_type = if bin.source.as_ref() == Some(&package) {
                         Some("source".to_string())
-                    } else if pkg.name == package {
+                    } else if &pkg.name == package {
                         downloaded_list
                             .listing
                             .arch
@@ -168,22 +168,27 @@ pub mod madison_cli {
         global: MadisonConfig,
     }
 
-    pub fn cli(key_func: &key_func::KeyFunc) {
+    pub async fn cli(key_func: &key_func::KeyFunc) {
         let package = std::env::args().nth(1).expect("no package name given");
         let config: CliConfig = Figment::new()
             .merge(Toml::file("Rocket.toml"))
             .extract()
             .expect("reading Rocket.toml configuration");
 
-        let system = init_system(config.global).expect("fapt System init");
+        let system = init_system(config.global).await.expect("fapt System init");
         print!(
             "{}",
-            do_madison(package, &system, key_func).expect("generating madison table")
+            do_madison(&package, &system, key_func).expect("generating madison table")
         );
     }
 }
 
 pub mod madison_web {
+
+    use std::{
+        collections::{hash_map::Entry, HashMap},
+        sync::Mutex,
+    };
 
     use fapt::system::System;
     use rocket::{Build, Rocket};
@@ -193,6 +198,7 @@ pub mod madison_web {
     struct MadisonState {
         key_func: &'static key_func::KeyFunc,
         system: System,
+        cached_results: Mutex<HashMap<String, String>>,
     }
 
     #[get("/?<package>")]
@@ -201,8 +207,18 @@ pub mod madison_web {
         state: &rocket::State<MadisonState>,
     ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
         let system = &state.system;
-        system.update().async?;
-        Ok(do_madison(package, system, &state.key_func)?)
+        let updated = system.update().await?;
+        let mut cached_results = state.cached_results.lock().unwrap();
+        if updated {
+            cached_results.drain();
+        }
+
+        Ok(match cached_results.entry(package.clone()) {
+            Entry::Occupied(o) => o.get().to_owned(),
+            Entry::Vacant(v) => v
+                .insert(do_madison(&package, system, &state.key_func)?)
+                .to_owned(),
+        })
     }
 
     pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
@@ -212,8 +228,10 @@ pub mod madison_web {
 
         let system = init_system(config).await.expect("fapt System init");
 
-        rocket
-            .mount("/", routes![madison])
-            .manage(MadisonState { key_func, system })
+        rocket.mount("/", routes![madison]).manage(MadisonState {
+            key_func,
+            system,
+            cached_results: Mutex::new(HashMap::new()),
+        })
     }
 }
