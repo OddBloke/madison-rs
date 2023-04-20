@@ -26,7 +26,7 @@ pub struct MadisonConfig {
     pub arches: Vec<String>,
 }
 
-pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
+pub async fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
     // Setup the system
     let mut system = System::cache_only()?;
     for path in config.extra_key_paths {
@@ -38,7 +38,7 @@ pub fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
     ))?);
 
     system.set_arches(config.arches);
-    system.update()?;
+    system.update().await?;
     Ok(system)
 }
 
@@ -196,21 +196,21 @@ pub mod madison_web {
     }
 
     #[get("/?<package>")]
-    fn madison(
+    async fn madison(
         package: String,
         state: &rocket::State<MadisonState>,
     ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
         let system = &state.system;
-        system.update()?;
+        system.update().async?;
         Ok(do_madison(package, system, &state.key_func)?)
     }
 
-    pub fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
+    pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
         let rocket = rocket::build();
         let figment = rocket.figment();
         let config: MadisonConfig = figment.extract().expect("config");
 
-        let system = init_system(config).expect("fapt System init");
+        let system = init_system(config).await.expect("fapt System init");
 
         rocket
             .mount("/", routes![madison])

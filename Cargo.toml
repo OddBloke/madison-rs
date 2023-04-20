@@ -14,3 +14,4 @@ rayon = "*"
 rocket = "0.5.0-rc.2"
 serde = "*"
 tabled = "*"
+tokio = { version = "1", features = ["full"] }
