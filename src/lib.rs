@@ -2,6 +2,7 @@
 extern crate rocket;
 
 use std::cmp::Ordering;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
@@ -43,91 +44,115 @@ pub async fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error>
 }
 
 pub fn do_madison(
-    package: &String,
+    packages: Vec<String>,
     system: &System,
     key_func: &key_func::KeyFunc,
 ) -> Result<String, anyhow::Error> {
     // Collect all the versions
-    let versions: Vec<_> = system
+    let versions: Vec<Vec<_>> = system
         .listings()?
         .par_iter()
         .map(|downloaded_list| -> Result<_, anyhow::Error> {
-            let mut types = HashSet::new();
             let key = key_func(downloaded_list);
-            let mut version: Option<String> = None;
+            let mut versions: HashMap<_, (String, HashSet<_>)> = HashMap::new();
             for section in system.open_listing(downloaded_list)? {
                 let pkg = section?.as_pkg()?;
                 if let Some(bin) = pkg.as_bin() {
-                    let pkg_type = if bin.source.as_ref() == Some(&package) {
-                        Some("source".to_string())
-                    } else if &pkg.name == package {
-                        downloaded_list
-                            .listing
-                            .arch
-                            .as_ref()
-                            .map_or(Some("unknown!".to_string()), |arch| Some(arch.to_owned()))
+                    let mut pkg_type = if let Some(source_pkg_name) = bin.source.as_ref() {
+                        if packages.contains(&&source_pkg_name) {
+                            Some((source_pkg_name.clone(), "source".to_string()))
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     };
-                    if let Some(pkg_type) = pkg_type {
-                        types.insert(pkg_type);
-                        if let Some(current_value) = &version {
-                            if deb_version::compare_versions(&pkg.version, current_value)
-                                == Ordering::Greater
-                            {
-                                version = Some(pkg.version);
-                            }
+                    if pkg_type == None {
+                        pkg_type = if packages.contains(&&pkg.name) {
+                            downloaded_list.listing.arch.as_ref().map_or(
+                                Some((pkg.name.to_string(), "unknown!".to_string())),
+                                |arch| Some((pkg.name.to_string(), arch.to_owned())),
+                            )
                         } else {
-                            version = Some(pkg.version);
+                            None
+                        }
+                    };
+                    if let Some((pkg_name, pkg_type)) = pkg_type {
+                        match versions.entry(pkg_name) {
+                            Entry::Occupied(mut o) => {
+                                let (current_version, types) = o.get_mut();
+                                types.insert(pkg_type);
+                                if deb_version::compare_versions(&pkg.version, current_version)
+                                    == Ordering::Greater
+                                {
+                                    *current_version = pkg.version
+                                }
+                            }
+                            Entry::Vacant(o) => {
+                                o.insert((pkg.version, HashSet::from([pkg_type])));
+                            }
                         }
                     }
                 }
             }
-            Ok((key, version, types))
-        })
-        .filter_map(|res| {
-            if let Ok((name, version, types)) = res {
-                version.map(|version| Ok((name, version, types)))
-            } else {
-                Some(Err(res.expect_err("unreachable")))
-            }
+            Ok(versions
+                .iter()
+                .map(|(package_name, (version, types))| {
+                    (
+                        package_name.clone(),
+                        key.clone(),
+                        version.clone(),
+                        types.clone(),
+                    )
+                })
+                .collect())
         })
         .collect::<Result<_, _>>()?;
     info!("{:?}", versions);
 
-    let mut merged_versions: HashMap<(String, String), HashSet<_>> = HashMap::new();
-    for (codename, codename_version, types) in versions {
+    let mut merged_versions: HashMap<String, HashMap<(String, String), HashSet<String>>> =
+        HashMap::new();
+    for (package, codename, codename_version, types) in versions.into_iter().flatten() {
+        let pkg_merged_versions = merged_versions.entry(package).or_insert(HashMap::new());
         let key = (codename, codename_version);
-        if let Some(current_value) = merged_versions.get_mut(&key) {
-            (*current_value).extend(types);
+        if let Some(current_value) = pkg_merged_versions.get_mut(&key) {
+            (*current_value).extend(types.to_owned());
         } else {
-            merged_versions.insert(key, types);
+            pkg_merged_versions.insert(key, types.to_owned());
         }
     }
 
-    let mut merged_vec = merged_versions.into_iter().collect::<Vec<_>>();
-    merged_vec.sort_by(|((codename1, v1), _), ((codename2, v2), _)| {
-        match deb_version::compare_versions(v1, v2) {
-            Ordering::Equal => codename1.cmp(codename2),
-            other => other,
-        }
-    });
+    let mut merged_vecs: HashMap<_, Vec<_>> = merged_versions
+        .into_par_iter()
+        .map(|(package, entries)| {
+            let mut merged_vec = entries.into_iter().collect::<Vec<_>>();
+            merged_vec.sort_by(|((codename1, v1), _), ((codename2, v2), _)| {
+                match deb_version::compare_versions(v1, v2) {
+                    Ordering::Equal => codename1.cmp(codename2),
+                    other => other,
+                }
+            });
+            (package, merged_vec)
+        })
+        .collect();
 
     let mut output_builder = Builder::default();
-    for ((codename, codename_version), mut types) in merged_vec {
-        // Start with "source", append sorted architectures, join with ", "
-        let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
-        let mut arch_parts = types.into_iter().collect::<Vec<_>>();
-        arch_parts.sort();
-        type_parts.extend(arch_parts);
-        let type_output = type_parts.join(", ");
+    for package in packages {
+        for ((codename, codename_version), mut types) in merged_vecs.remove(&package).unwrap() {
+            // Start with "source", append sorted architectures, join with ", "
+            let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
+            let mut arch_parts = types.into_iter().collect::<Vec<_>>();
+            arch_parts.sort();
+            type_parts.extend(arch_parts);
+            let type_output = type_parts.join(", ");
 
-        output_builder.push_record(vec![
-            package.to_owned(),
-            codename_version.to_string(),
-            codename.to_string(),
-            type_output,
-        ]);
+            output_builder.push_record(vec![
+                package.to_owned(),
+                codename_version.to_string(),
+                codename.to_string(),
+                type_output,
+            ]);
+        }
     }
     Ok(format!(
         "{}\n",
@@ -178,7 +203,7 @@ pub mod madison_cli {
         let system = init_system(config.global).await.expect("fapt System init");
         print!(
             "{}",
-            do_madison(&package, &system, key_func).expect("generating madison table")
+            do_madison(vec![package], &system, key_func).expect("generating madison table")
         );
     }
 }
@@ -216,15 +241,11 @@ pub mod madison_web {
         Ok(match cached_results.entry(package.clone()) {
             Entry::Occupied(o) => o.get().to_owned(),
             Entry::Vacant(v) => v
-                .insert(
-                    package
-                        .split(" ")
-                        .map(|package| {
-                            Ok(do_madison(&package.to_string(), system, &state.key_func)?)
-                        })
-                        .collect::<Result<Vec<_>, anyhow::Error>>()?
-                        .join(""),
-                )
+                .insert(do_madison(
+                    package.split(" ").map(|s| s.to_string()).collect(),
+                    system,
+                    &state.key_func,
+                )?)
                 .to_owned(),
         })
     }
