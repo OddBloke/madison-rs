@@ -216,7 +216,15 @@ pub mod madison_web {
         Ok(match cached_results.entry(package.clone()) {
             Entry::Occupied(o) => o.get().to_owned(),
             Entry::Vacant(v) => v
-                .insert(do_madison(&package, system, &state.key_func)?)
+                .insert(
+                    package
+                        .split(" ")
+                        .map(|package| {
+                            Ok(do_madison(&package.to_string(), system, &state.key_func)?)
+                        })
+                        .collect::<Result<Vec<_>, anyhow::Error>>()?
+                        .join(""),
+                )
                 .to_owned(),
         })
     }
