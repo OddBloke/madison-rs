@@ -47,6 +47,7 @@ pub fn do_madison(
     packages: Vec<String>,
     system: &System,
     key_func: &key_func::KeyFunc,
+    suite: Option<String>,
 ) -> Result<String, anyhow::Error> {
     // Collect all the versions
     let versions: Vec<Vec<_>> = system
@@ -54,6 +55,11 @@ pub fn do_madison(
         .par_iter()
         .map(|downloaded_list| -> Result<_, anyhow::Error> {
             let key = key_func(downloaded_list);
+            if let Some(suite) = suite.as_ref() {
+                if &key != suite {
+                    return Ok(vec![]);
+                }
+            }
             let mut versions: HashMap<_, (String, HashSet<_>)> = HashMap::new();
             for section in system.open_listing(downloaded_list)? {
                 let pkg = section?.as_pkg()?;
@@ -196,7 +202,7 @@ pub mod madison_cli {
         let system = init_system(config.global).await.expect("fapt System init");
         print!(
             "{}",
-            do_madison(vec![package], &system, key_func).expect("generating madison table")
+            do_madison(vec![package], &system, key_func, None).expect("generating madison table")
         );
     }
 }
@@ -219,9 +225,10 @@ pub mod madison_web {
         cached_results: Mutex<HashMap<String, String>>,
     }
 
-    #[get("/?<package>")]
+    #[get("/?<package>&<s>")]
     async fn madison(
         package: String,
+        s: Option<String>,
         state: &rocket::State<MadisonState>,
     ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
         let system = &state.system;
@@ -238,6 +245,7 @@ pub mod madison_web {
                     package.split(" ").map(|s| s.to_string()).collect(),
                     system,
                     &state.key_func,
+                    s,
                 )?)
                 .to_owned(),
         })
