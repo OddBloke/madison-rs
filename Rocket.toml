@@ -10,3 +10,4 @@ arches = [
      "riscv64",
      "s390x",
 ]
+port = 9393
