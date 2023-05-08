@@ -137,7 +137,12 @@ pub fn do_madison(
 
     let mut output_builder = Builder::default();
     for package in packages {
-        for ((codename, codename_version), mut types) in merged_vecs.remove(&package).unwrap() {
+        let merged_vec = if let Some(merged_vec) = merged_vecs.remove(&package) {
+            merged_vec
+        } else {
+            continue;
+        };
+        for ((codename, codename_version), mut types) in merged_vec {
             // Start with "source", append sorted architectures, join with ", "
             let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
             let mut arch_parts = types.into_iter().collect::<Vec<_>>();
