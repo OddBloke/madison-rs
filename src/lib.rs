@@ -58,24 +58,17 @@ pub fn do_madison(
             for section in system.open_listing(downloaded_list)? {
                 let pkg = section?.as_pkg()?;
                 if let Some(bin) = pkg.as_bin() {
-                    let mut pkg_type = if let Some(source_pkg_name) = bin.source.as_ref() {
+                    let mut pkg_type = None;
+                    if let Some(source_pkg_name) = bin.source.as_ref() {
                         if packages.contains(&&source_pkg_name) {
-                            Some((source_pkg_name.clone(), "source".to_string()))
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
+                            pkg_type = Some((source_pkg_name.clone(), "source".to_string()))
+                        };
                     };
-                    if pkg_type == None {
-                        pkg_type = if packages.contains(&&pkg.name) {
-                            downloaded_list.listing.arch.as_ref().map_or(
-                                Some((pkg.name.to_string(), "unknown!".to_string())),
-                                |arch| Some((pkg.name.to_string(), arch.to_owned())),
-                            )
-                        } else {
-                            None
-                        }
+                    if pkg_type == None && packages.contains(&&pkg.name) {
+                        pkg_type = downloaded_list.listing.arch.as_ref().map_or(
+                            Some((pkg.name.to_string(), "unknown!".to_string())),
+                            |arch| Some((pkg.name.to_string(), arch.to_owned())),
+                        )
                     };
                     if let Some((pkg_name, pkg_type)) = pkg_type {
                         match versions.entry(pkg_name) {
