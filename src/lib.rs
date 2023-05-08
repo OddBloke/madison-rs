@@ -222,7 +222,7 @@ pub mod madison_web {
     struct MadisonState {
         key_func: &'static key_func::KeyFunc,
         system: System,
-        cached_results: Mutex<HashMap<String, String>>,
+        cached_results: Mutex<HashMap<(String, Option<String>), String>>,
     }
 
     #[get("/?<package>&<s>")]
@@ -238,7 +238,8 @@ pub mod madison_web {
             cached_results.drain();
         }
 
-        Ok(match cached_results.entry(package.clone()) {
+        let key = (package.clone(), s.clone());
+        Ok(match cached_results.entry(key) {
             Entry::Occupied(o) => o.get().to_owned(),
             Entry::Vacant(v) => v
                 .insert(do_madison(
