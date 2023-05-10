@@ -228,8 +228,8 @@ pub mod madison_cli {
 pub mod madison_web {
 
     use std::{
-        collections::{hash_map::Entry, HashMap},
-        sync::{Arc, Mutex, RwLock},
+        collections::HashMap,
+        sync::{Arc, RwLock},
         time::Duration,
     };
 
@@ -242,7 +242,6 @@ pub mod madison_web {
     };
 
     struct MadisonState {
-        cached_results: Mutex<HashMap<(String, Option<String>), String>>,
         madison_mapping: Arc<RwLock<MadisonMapping>>,
     }
 
@@ -252,21 +251,12 @@ pub mod madison_web {
         s: Option<String>,
         state: &rocket::State<MadisonState>,
     ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
-        let mut cached_results = state.cached_results.lock().unwrap();
-
-        let key = (package.clone(), s.clone());
-        Ok(match cached_results.entry(key) {
-            Entry::Occupied(o) => o.get().to_owned(),
-            Entry::Vacant(v) => {
-                let ro_mapping = state.madison_mapping.read().expect("read access failed");
-                v.insert(do_madison(
-                    &ro_mapping,
-                    package.split(" ").map(|s| s.to_string()).collect(),
-                    s,
-                )?)
-                .to_owned()
-            }
-        })
+        let ro_mapping = state.madison_mapping.read().expect("read access failed");
+        Ok(do_madison(
+            &ro_mapping,
+            package.split(" ").map(|s| s.to_string()).collect(),
+            s,
+        )?)
     }
 
     pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
@@ -302,7 +292,6 @@ pub mod madison_web {
         });
 
         rocket.mount("/", routes![madison]).manage(MadisonState {
-            cached_results: Mutex::new(HashMap::new()),
             madison_mapping: mapping_lock,
         })
     }
