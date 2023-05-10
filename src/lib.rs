@@ -123,7 +123,7 @@ pub fn do_madison(
     packages: Vec<String>,
     suite: Option<String>,
 ) -> Result<String, anyhow::Error> {
-    let mut merged_vecs: HashMap<_, Vec<_>> = madison_mapping
+    let mut package_lines: HashMap<_, _> = madison_mapping
         .into_par_iter()
         .filter(|(package, _)| packages.contains(package))
         .map(|(package, entries)| {
@@ -144,30 +144,37 @@ pub fn do_madison(
             });
             (package, merged_vec)
         })
+        .map(|(package, merged_vec)| {
+            let lines: Vec<_> = merged_vec
+                .into_iter()
+                .map(|((codename, codename_version), types)| {
+                    // Start with "source", append sorted architectures, join with ", "
+                    let mut types = types.clone();
+                    let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
+                    let mut arch_parts = types.iter().map(|s| s.clone()).collect::<Vec<_>>();
+                    arch_parts.sort();
+                    type_parts.extend(arch_parts);
+                    vec![
+                        package.to_owned(),
+                        codename_version.to_string(),
+                        codename.to_string(),
+                        type_parts.join(", "),
+                    ]
+                })
+                .collect();
+            (package, lines)
+        })
         .collect();
 
     let mut output_builder = Builder::default();
     for package in packages {
-        let merged_vec = if let Some(merged_vec) = merged_vecs.remove(&package) {
+        let merged_vec = if let Some(merged_vec) = package_lines.remove(&package) {
             merged_vec
         } else {
             continue;
         };
-        for ((codename, codename_version), types) in merged_vec {
-            // Start with "source", append sorted architectures, join with ", "
-            let mut types = types.clone();
-            let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
-            let mut arch_parts = types.iter().map(|s| s.clone()).collect::<Vec<_>>();
-            arch_parts.sort();
-            type_parts.extend(arch_parts);
-            let type_output = type_parts.join(", ");
-
-            output_builder.push_record(vec![
-                package.to_owned(),
-                codename_version.to_string(),
-                codename.to_string(),
-                type_output,
-            ]);
+        for line in merged_vec {
+            output_builder.push_record(line);
         }
     }
     Ok(format!(
