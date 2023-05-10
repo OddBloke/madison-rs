@@ -123,9 +123,13 @@ pub fn do_madison(
     packages: Vec<String>,
     suite: Option<String>,
 ) -> Result<String, anyhow::Error> {
-    let mut package_lines: HashMap<_, _> = madison_mapping
-        .into_par_iter()
-        .filter(|(package, _)| packages.contains(package))
+    let mut package_lines: HashMap<_, _> = packages
+        .par_iter()
+        .filter_map(|package| {
+            madison_mapping
+                .get(package)
+                .map(|entries| (package.clone(), entries))
+        })
         .map(|(package, entries)| {
             let mut merged_vec = entries
                 .into_iter()
