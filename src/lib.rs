@@ -8,8 +8,6 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::BufReader;
 
-use log::info;
-
 use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
@@ -19,6 +17,8 @@ use tabled::{builder::Builder, settings::Style};
 use serde::Deserialize;
 
 use rayon::prelude::*;
+
+pub type MadisonMapping = HashMap<String, HashMap<(String, String), HashSet<String>>>;
 
 #[derive(Deserialize)]
 pub struct MadisonConfig {
@@ -43,52 +43,49 @@ pub async fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error>
     Ok(system)
 }
 
-pub fn do_madison(
-    packages: Vec<String>,
+fn build_madison_mapping(
     system: &System,
     key_func: &key_func::KeyFunc,
-    suite: Option<String>,
-) -> Result<String, anyhow::Error> {
+) -> Result<MadisonMapping, anyhow::Error> {
     // Collect all the versions
     let versions: Vec<Vec<_>> = system
         .listings()?
         .par_iter()
         .map(|downloaded_list| -> Result<_, anyhow::Error> {
             let key = key_func(downloaded_list);
-            if let Some(suite) = suite.as_ref() {
-                if &key != suite {
-                    return Ok(vec![]);
-                }
-            }
             let mut versions: HashMap<_, (String, HashSet<_>)> = HashMap::new();
             for section in system.open_listing(downloaded_list)? {
                 let pkg = section?.as_pkg()?;
                 if let Some(bin) = pkg.as_bin() {
-                    let mut pkg_type = None;
-                    if let Some(source_pkg_name) = bin.source.as_ref() {
-                        if packages.contains(&&source_pkg_name) {
-                            pkg_type = Some((source_pkg_name.clone(), "source".to_string()))
-                        };
-                    };
-                    if pkg_type == None && packages.contains(&&pkg.name) {
-                        pkg_type = downloaded_list.listing.arch.as_ref().map_or(
-                            Some((pkg.name.to_string(), "unknown!".to_string())),
-                            |arch| Some((pkg.name.to_string(), arch.to_owned())),
-                        )
-                    };
-                    if let Some((pkg_name, pkg_type)) = pkg_type {
+                    let mut pkg_types = HashMap::new();
+                    pkg_types
+                        .entry(match bin.source.as_ref() {
+                            Some(source_pkg_name) => source_pkg_name.clone(),
+                            None => pkg.name.clone(),
+                        })
+                        .or_insert(HashSet::new())
+                        .insert("source".to_string());
+                    pkg_types.entry(pkg.name).or_insert(HashSet::new()).insert(
+                        downloaded_list
+                            .listing
+                            .arch
+                            .as_ref()
+                            .unwrap_or(&"unknown!".to_string())
+                            .clone(),
+                    );
+                    for (pkg_name, pkg_types) in pkg_types.into_iter() {
                         match versions.entry(pkg_name) {
                             Entry::Occupied(mut o) => {
                                 let (current_version, types) = o.get_mut();
-                                types.insert(pkg_type);
+                                types.extend(pkg_types);
                                 if deb_version::compare_versions(&pkg.version, current_version)
                                     == Ordering::Greater
                                 {
-                                    *current_version = pkg.version
+                                    *current_version = pkg.version.clone()
                                 }
                             }
                             Entry::Vacant(o) => {
-                                o.insert((pkg.version, HashSet::from([pkg_type])));
+                                o.insert((pkg.version.clone(), pkg_types));
                             }
                         }
                     }
@@ -107,10 +104,8 @@ pub fn do_madison(
                 .collect())
         })
         .collect::<Result<_, _>>()?;
-    info!("{:?}", versions);
 
-    let mut merged_versions: HashMap<String, HashMap<(String, String), HashSet<String>>> =
-        HashMap::new();
+    let mut merged_versions: MadisonMapping = HashMap::new();
     for (package, codename, codename_version, types) in versions.into_iter().flatten() {
         let pkg_merged_versions = merged_versions.entry(package).or_insert(HashMap::new());
         let key = (codename, codename_version);
@@ -120,11 +115,26 @@ pub fn do_madison(
             pkg_merged_versions.insert(key, types.to_owned());
         }
     }
+    Ok(merged_versions)
+}
 
-    let mut merged_vecs: HashMap<_, Vec<_>> = merged_versions
+pub fn do_madison(
+    madison_mapping: &MadisonMapping,
+    packages: Vec<String>,
+    suite: Option<String>,
+) -> Result<String, anyhow::Error> {
+    let mut merged_vecs: HashMap<_, Vec<_>> = madison_mapping
         .into_par_iter()
         .map(|(package, entries)| {
-            let mut merged_vec = entries.into_iter().collect::<Vec<_>>();
+            let mut merged_vec = entries
+                .into_iter()
+                .filter(|((codename, _), _)| {
+                    suite
+                        .as_ref()
+                        .map(|suite| codename == suite)
+                        .unwrap_or(true)
+                })
+                .collect::<Vec<_>>();
             merged_vec.sort_by(|((codename1, v1), _), ((codename2, v2), _)| {
                 match deb_version::compare_versions(v1, v2) {
                     Ordering::Equal => codename1.cmp(codename2),
@@ -142,10 +152,11 @@ pub fn do_madison(
         } else {
             continue;
         };
-        for ((codename, codename_version), mut types) in merged_vec {
+        for ((codename, codename_version), types) in merged_vec {
             // Start with "source", append sorted architectures, join with ", "
+            let mut types = types.clone();
             let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
-            let mut arch_parts = types.into_iter().collect::<Vec<_>>();
+            let mut arch_parts = types.iter().map(|s| s.clone()).collect::<Vec<_>>();
             arch_parts.sort();
             type_parts.extend(arch_parts);
             let type_output = type_parts.join(", ");
@@ -190,7 +201,7 @@ pub mod madison_cli {
     use figment::Figment;
     use serde::Deserialize;
 
-    use crate::{do_madison, init_system, key_func, MadisonConfig};
+    use crate::{build_madison_mapping, do_madison, init_system, key_func, MadisonConfig};
 
     #[derive(Deserialize)]
     struct CliConfig {
@@ -205,9 +216,11 @@ pub mod madison_cli {
             .expect("reading Rocket.toml configuration");
 
         let system = init_system(config.global).await.expect("fapt System init");
+        let madison_mapping =
+            build_madison_mapping(&system, key_func).expect("build madison mapping");
         print!(
             "{}",
-            do_madison(vec![package], &system, key_func, None).expect("generating madison table")
+            do_madison(&madison_mapping, vec![package], None).expect("generating madison table")
         );
     }
 }
@@ -216,18 +229,21 @@ pub mod madison_web {
 
     use std::{
         collections::{hash_map::Entry, HashMap},
-        sync::Mutex,
+        sync::{Arc, Mutex, RwLock},
+        time::Duration,
     };
 
-    use fapt::system::System;
+    use log::info;
     use rocket::{Build, Rocket};
+    use tokio::time::sleep;
 
-    use crate::{do_madison, init_system, key_func, MadisonConfig};
+    use crate::{
+        build_madison_mapping, do_madison, init_system, key_func, MadisonConfig, MadisonMapping,
+    };
 
     struct MadisonState {
-        key_func: &'static key_func::KeyFunc,
-        system: System,
         cached_results: Mutex<HashMap<(String, Option<String>), String>>,
+        madison_mapping: Arc<RwLock<MadisonMapping>>,
     }
 
     #[get("/?<package>&<s>")]
@@ -236,24 +252,20 @@ pub mod madison_web {
         s: Option<String>,
         state: &rocket::State<MadisonState>,
     ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
-        let system = &state.system;
-        let updated = system.update().await?;
         let mut cached_results = state.cached_results.lock().unwrap();
-        if updated {
-            cached_results.drain();
-        }
 
         let key = (package.clone(), s.clone());
         Ok(match cached_results.entry(key) {
             Entry::Occupied(o) => o.get().to_owned(),
-            Entry::Vacant(v) => v
-                .insert(do_madison(
+            Entry::Vacant(v) => {
+                let ro_mapping = state.madison_mapping.read().expect("read access failed");
+                v.insert(do_madison(
+                    &ro_mapping,
                     package.split(" ").map(|s| s.to_string()).collect(),
-                    system,
-                    &state.key_func,
                     s,
                 )?)
-                .to_owned(),
+                .to_owned()
+            }
         })
     }
 
@@ -264,10 +276,34 @@ pub mod madison_web {
 
         let system = init_system(config).await.expect("fapt System init");
 
+        let mapping_lock = Arc::new(RwLock::new(HashMap::new()));
+        let c_lock = mapping_lock.clone();
+        tokio::task::spawn(async move {
+            {
+                // Take the lock immediately for initialisation
+                let mut madison_mapping = c_lock.write().expect("write access failed");
+                info!("Initialising madison mapping");
+                *madison_mapping =
+                    build_madison_mapping(&system, key_func).expect("build_madison_mapping");
+            }
+
+            loop {
+                sleep(Duration::from_secs(60)).await;
+                info!("Checking for updates");
+                let did_update = system.update().await.unwrap();
+                if did_update {
+                    info!("Update happened: updating mapping");
+                    let new_mapping =
+                        build_madison_mapping(&system, key_func).expect("build_madison_mapping");
+                    let mut madison_mapping = c_lock.write().expect("write access failed");
+                    *madison_mapping = new_mapping
+                }
+            }
+        });
+
         rocket.mount("/", routes![madison]).manage(MadisonState {
-            key_func,
-            system,
             cached_results: Mutex::new(HashMap::new()),
+            madison_mapping: mapping_lock,
         })
     }
 }
