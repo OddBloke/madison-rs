@@ -118,12 +118,12 @@ fn build_madison_mapping(
     Ok(merged_versions)
 }
 
-pub fn do_madison(
+fn generate_madison_foo(
     madison_mapping: &MadisonMapping,
-    packages: Vec<String>,
+    packages: &Vec<String>,
     suite: Option<String>,
-) -> Result<String, anyhow::Error> {
-    let mut package_lines: HashMap<_, _> = packages
+) -> HashMap<String, Vec<Vec<String>>> {
+    packages
         .par_iter()
         .filter_map(|package| {
             madison_mapping
@@ -168,8 +168,15 @@ pub fn do_madison(
                 .collect();
             (package, lines)
         })
-        .collect();
+        .collect()
+}
 
+pub fn do_madison(
+    madison_mapping: &MadisonMapping,
+    packages: Vec<String>,
+    suite: Option<String>,
+) -> Result<String, anyhow::Error> {
+    let mut package_lines = generate_madison_foo(madison_mapping, &packages, suite);
     let mut output_builder = Builder::default();
     for package in packages {
         let merged_vec = if let Some(merged_vec) = package_lines.remove(&package) {
