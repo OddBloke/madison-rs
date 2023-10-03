@@ -294,7 +294,6 @@ pub mod madison_web {
 
         let mapping_lock = Arc::new(RwLock::new(HashMap::new()));
         let c_lock = mapping_lock.clone();
-        tokio::task::spawn(async move {
             {
                 // Take the lock immediately for initialisation
                 let mut madison_mapping = c_lock.write().expect("write access failed");
@@ -304,7 +303,6 @@ pub mod madison_web {
             }
             info!("Mapping initialised");
 
-        });
         info!("Task spawned!");
 
         rocket
