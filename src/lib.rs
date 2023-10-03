@@ -316,6 +316,7 @@ pub mod madison_web {
                 }
             }
         });
+        info!("Task spawned!");
 
         rocket
             .mount("/", routes![index, madison])
