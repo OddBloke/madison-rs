@@ -254,6 +254,7 @@ pub mod madison_web {
 
     use log::info;
     use rocket::{Build, Rocket};
+    use rocket_dyn_templates::Template;
     use tokio::time::sleep;
 
     use crate::{
@@ -262,6 +263,12 @@ pub mod madison_web {
 
     struct MadisonState {
         madison_mapping: Arc<RwLock<MadisonMapping>>,
+    }
+
+    #[get("/")]
+    async fn index() -> Template {
+        let context: HashMap<String, String> = HashMap::new();
+        Template::render("index.html", &context)
     }
 
     #[get("/?<package>&<s>")]
@@ -310,8 +317,28 @@ pub mod madison_web {
             }
         });
 
-        rocket.mount("/", routes![madison]).manage(MadisonState {
-            madison_mapping: mapping_lock,
-        })
+        rocket
+            .mount("/", routes![index, madison])
+            .manage(MadisonState {
+                madison_mapping: mapping_lock,
+            })
+            .attach(Template::try_custom(|engines| {
+                for (name, content) in templates::TEMPLATES {
+                    engines.tera.add_raw_template(name, content)?;
+                }
+                Ok(())
+            }))
+    }
+
+    mod templates {
+        const INDEX_TMPL: &str = r#"
+            <html>
+              <form method="get">
+                <input id="urlInput" type="search" name="package" placeholder="package name" autofocus required>
+                <input type="submit">
+              </form>
+            </html>
+        "#;
+        pub(super) const TEMPLATES: &[(&str, &str)] = &[("index.html", INDEX_TMPL)];
     }
 }

@@ -11,3 +11,4 @@ arches = [
      "s390x",
 ]
 port = 9393
+template_dir = "."
