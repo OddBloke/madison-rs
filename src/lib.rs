@@ -302,19 +302,8 @@ pub mod madison_web {
                 *madison_mapping =
                     build_madison_mapping(&system, key_func).expect("build_madison_mapping");
             }
+            info!("Mapping initialised");
 
-            loop {
-                sleep(Duration::from_secs(60)).await;
-                info!("Checking for updates");
-                let did_update = system.update().await.unwrap();
-                if did_update {
-                    info!("Update happened: updating mapping");
-                    let new_mapping =
-                        build_madison_mapping(&system, key_func).expect("build_madison_mapping");
-                    let mut madison_mapping = c_lock.write().expect("write access failed");
-                    *madison_mapping = new_mapping
-                }
-            }
         });
         info!("Task spawned!");
 
