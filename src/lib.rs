@@ -271,7 +271,7 @@ pub mod madison_web {
         Template::render("index.html", &context)
     }
 
-    #[get("/?<package>&<s>")]
+    #[get("/?<package>&text=on&<s>")]
     async fn madison(
         package: String,
         s: Option<String>,
@@ -336,6 +336,7 @@ pub mod madison_web {
             <html>
               <form method="get">
                 <input id="urlInput" type="search" name="package" placeholder="package name" autofocus required>
+                <input id="text" name="text" value="on" hidden="true">
                 <input type="submit">
               </form>
             </html>
