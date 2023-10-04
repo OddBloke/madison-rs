@@ -175,7 +175,7 @@ pub fn do_madison(
     madison_mapping: &MadisonMapping,
     packages: Vec<String>,
     suite: Option<String>,
-) -> Result<String, anyhow::Error> {
+) -> String {
     let mut package_lines = generate_madison_structure(madison_mapping, &packages, suite);
     let mut output_builder = Builder::default();
     for package in packages {
@@ -188,7 +188,7 @@ pub fn do_madison(
             output_builder.push_record(line);
         }
     }
-    Ok(format!(
+    format!(
         "{}\n",
         output_builder
             .build()
@@ -198,7 +198,7 @@ pub fn do_madison(
             .map(|line| line.trim())
             .collect::<Vec<&str>>()
             .join("\n")
-    ))
+    )
 }
 
 pub mod key_func {
@@ -237,10 +237,7 @@ pub mod madison_cli {
         let system = init_system(config.global).await.expect("fapt System init");
         let madison_mapping =
             build_madison_mapping(&system, key_func).expect("build madison mapping");
-        print!(
-            "{}",
-            do_madison(&madison_mapping, vec![package], None).expect("generating madison table")
-        );
+        print!("{}", do_madison(&madison_mapping, vec![package], None));
     }
 }
 
@@ -283,7 +280,7 @@ pub mod madison_web {
             &ro_mapping,
             package.split(" ").map(|s| s.to_string()).collect(),
             s,
-        )?)
+        ))
     }
 
     #[get("/?<package>&<s>")]
