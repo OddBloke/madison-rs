@@ -14,7 +14,7 @@ use fapt::system::System;
 
 use tabled::{builder::Builder, settings::Style};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use rayon::prelude::*;
 
@@ -25,6 +25,39 @@ pub struct MadisonConfig {
     pub sources_list: String,
     pub extra_key_paths: Vec<String>,
     pub arches: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct MadisonOutputRecord {
+    pub package: String,
+    pub version: String,
+    pub codename: String,
+    pub architectures: String,
+}
+
+impl MadisonOutputRecord {
+    pub fn new(package: String, version: String, codename: String, architectures: String) -> Self {
+        MadisonOutputRecord {
+            package,
+            version,
+            codename,
+            architectures,
+        }
+    }
+}
+
+impl IntoIterator for MadisonOutputRecord {
+    type Item = String;
+    type IntoIter = std::array::IntoIter<String, 4>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIterator::into_iter([
+            self.package,
+            self.version,
+            self.codename,
+            self.architectures,
+        ])
+    }
 }
 
 pub async fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
@@ -122,7 +155,7 @@ pub fn generate_madison_structure(
     madison_mapping: &MadisonMapping,
     packages: &Vec<String>,
     suite: Option<String>,
-) -> HashMap<String, Vec<Vec<String>>> {
+) -> HashMap<String, Vec<MadisonOutputRecord>> {
     packages
         .par_iter()
         .filter_map(|package| {
@@ -158,12 +191,12 @@ pub fn generate_madison_structure(
                     let mut arch_parts = types.iter().map(|s| s.clone()).collect::<Vec<_>>();
                     arch_parts.sort();
                     type_parts.extend(arch_parts);
-                    vec![
+                    MadisonOutputRecord::new(
                         package.to_owned(),
                         codename_version.to_string(),
                         codename.to_string(),
                         type_parts.join(", "),
-                    ]
+                    )
                 })
                 .collect();
             (package, lines)
@@ -369,9 +402,10 @@ pub mod madison_web {
               {% for _, package_records in madison %}
                 {% for record in package_records %}
                   <tr>
-                    {% for item in record %}
-                      <td>{{ item }}</td>
-                    {% endfor %}
+                    <td>{{ record.package }}</td>
+                    <td>{{ record.version }}</td>
+                    <td>{{ record.codename }}</td>
+                    <td>{{ record.architectures }}</td>
                   </tr>
                 {% endfor %}
               {% endfor %}
