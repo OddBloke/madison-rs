@@ -118,7 +118,7 @@ fn build_madison_mapping(
     Ok(merged_versions)
 }
 
-fn generate_madison_foo(
+pub fn generate_madison_structure(
     madison_mapping: &MadisonMapping,
     packages: &Vec<String>,
     suite: Option<String>,
@@ -176,7 +176,7 @@ pub fn do_madison(
     packages: Vec<String>,
     suite: Option<String>,
 ) -> Result<String, anyhow::Error> {
-    let mut package_lines = generate_madison_foo(madison_mapping, &packages, suite);
+    let mut package_lines = generate_madison_structure(madison_mapping, &packages, suite);
     let mut output_builder = Builder::default();
     for package in packages {
         let merged_vec = if let Some(merged_vec) = package_lines.remove(&package) {
@@ -258,7 +258,8 @@ pub mod madison_web {
     use tokio::time::sleep;
 
     use crate::{
-        build_madison_mapping, do_madison, init_system, key_func, MadisonConfig, MadisonMapping,
+        build_madison_mapping, do_madison, generate_madison_structure, init_system, key_func,
+        MadisonConfig, MadisonMapping,
     };
 
     struct MadisonState {
@@ -283,6 +284,25 @@ pub mod madison_web {
             package.split(" ").map(|s| s.to_string()).collect(),
             s,
         )?)
+    }
+
+    #[get("/?<package>&<s>")]
+    async fn madison_html(
+        package: String,
+        s: Option<String>,
+        state: &rocket::State<MadisonState>,
+    ) -> Template {
+        let mut context = HashMap::new();
+        let ro_mapping = state.madison_mapping.read().expect("read access failed");
+        context.insert(
+            "madison",
+            generate_madison_structure(
+                &ro_mapping,
+                &package.split(" ").map(|s| s.to_string()).collect(),
+                s,
+            ),
+        );
+        Template::render("package.html", &context)
     }
 
     pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
@@ -319,7 +339,7 @@ pub mod madison_web {
         info!("Task spawned!");
 
         rocket
-            .mount("/", routes![index, madison])
+            .mount("/", routes![index, madison, madison_html])
             .manage(MadisonState {
                 madison_mapping: mapping_lock,
             })
@@ -336,11 +356,32 @@ pub mod madison_web {
             <html>
               <form method="get">
                 <input id="urlInput" type="search" name="package" placeholder="package name" autofocus required>
-                <input id="text" name="text" value="on" hidden="true">
                 <input type="submit">
               </form>
             </html>
         "#;
-        pub(super) const TEMPLATES: &[(&str, &str)] = &[("index.html", INDEX_TMPL)];
+        const PACKAGE_TMPL: &str = r#"
+            <html>
+              <table>
+                <thead>
+                  <th>Package</th>
+                  <th>Version</th>
+                  <th></th>
+                  <th>Architecture</th>
+                </thead>
+              {% for _, package_records in madison %}
+                {% for record in package_records %}
+                  <tr>
+                    {% for item in record %}
+                      <td>{{ item }}</td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              {% endfor %}
+              </table>
+            </html>
+        "#;
+        pub(super) const TEMPLATES: &[(&str, &str)] =
+            &[("index.html", INDEX_TMPL), ("package.html", PACKAGE_TMPL)];
     }
 }
