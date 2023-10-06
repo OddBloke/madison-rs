@@ -60,10 +60,10 @@ impl IntoIterator for MadisonOutputRecord {
     }
 }
 
-pub async fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error> {
+pub async fn init_system(config: &MadisonConfig) -> Result<System, anyhow::Error> {
     // Setup the system
     let mut system = System::cache_only()?;
-    for path in config.extra_key_paths {
+    for path in &config.extra_key_paths {
         system.add_keys_from(File::open(path)?)?;
     }
     commands::add_builtin_keys(&mut system);
@@ -71,7 +71,7 @@ pub async fn init_system(config: MadisonConfig) -> Result<System, anyhow::Error>
         File::open(&config.sources_list).unwrap(),
     ))?);
 
-    system.set_arches(config.arches);
+    system.set_arches(&config.arches);
     system.update().await?;
     Ok(system)
 }
@@ -267,7 +267,7 @@ pub mod madison_cli {
             .extract()
             .expect("reading Rocket.toml configuration");
 
-        let system = init_system(config.global).await.expect("fapt System init");
+        let system = init_system(&config.global).await.expect("fapt System init");
         let madison_mapping =
             build_madison_mapping(&system, key_func).expect("build madison mapping");
         print!("{}", do_madison(&madison_mapping, vec![package], None));
@@ -340,7 +340,7 @@ pub mod madison_web {
         let figment = rocket.figment();
         let config: MadisonConfig = figment.extract().expect("config");
 
-        let system = init_system(config).await.expect("fapt System init");
+        let system = init_system(&config).await.expect("fapt System init");
 
         let mapping_lock = Arc::new(RwLock::new(HashMap::new()));
         let c_lock = mapping_lock.clone();
