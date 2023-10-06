@@ -12,3 +12,4 @@ arches = [
 ]
 port = 9393
 template_dir = "."
+enable_metrics = false

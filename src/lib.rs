@@ -25,6 +25,8 @@ pub struct MadisonConfig {
     pub sources_list: String,
     pub extra_key_paths: Vec<String>,
     pub arches: Vec<String>,
+    // TODO: This is madison-web specific
+    pub enable_metrics: bool,
 }
 
 #[derive(Serialize)]
@@ -285,6 +287,7 @@ pub mod madison_web {
     use log::info;
     use rocket::{Build, Rocket};
     use rocket_dyn_templates::Template;
+    use rocket_prometheus::PrometheusMetrics;
     use tokio::time::sleep;
 
     use crate::{
@@ -368,7 +371,7 @@ pub mod madison_web {
         });
         info!("Task spawned!");
 
-        rocket
+        let mut app = rocket
             .mount("/", routes![index, madison, madison_html])
             .manage(MadisonState {
                 madison_mapping: mapping_lock,
@@ -385,7 +388,14 @@ pub mod madison_web {
                     }
                 }
                 Ok(())
-            }))
+            }));
+        if config.enable_metrics {
+            let prometheus = PrometheusMetrics::new();
+            app = app
+                .attach(prometheus.clone())
+                .mount("/metrics", prometheus)
+        }
+        app
     }
 
     mod templates {
