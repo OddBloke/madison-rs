@@ -425,11 +425,13 @@ pub mod madison_web {
         const INDEX_TMPL: &str = r#"
             <html>
               {% include "search-form" %}
+              {% include "footer" ignore missing %}
             </html>
         "#;
         const PACKAGE_TMPL: &str = r#"
             <html>
               {% include "package-table" %}
+              {% include "footer" ignore missing %}
             </html>
         "#;
         pub(super) const TEMPLATES: &[(&str, &str)] = &[
