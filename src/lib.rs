@@ -400,7 +400,6 @@ pub mod madison_web {
           {% endmacro package_row %}
         "#;
         const PACKAGE_TABLE: &str = r#"
-          {% import "package-macros" as package_macros %}
           <table>
             <thead>
               <th>Package</th>
@@ -422,22 +421,26 @@ pub mod madison_web {
           </form>
         "#;
 
-        const INDEX_TMPL: &str = r#"
+        const BASE_TMPL: &str = r#"
             <html>
-              {% include "search-form" %}
+              {% block body %}{% endblock %}
               {% include "footer" ignore missing %}
             </html>
         "#;
+        const INDEX_TMPL: &str = r#"
+            {% extends "base.html" %}
+            {% block body %}{% include "search-form" %}{% endblock %}
+        "#;
         const PACKAGE_TMPL: &str = r#"
-            <html>
-              {% include "package-table" %}
-              {% include "footer" ignore missing %}
-            </html>
+            {% extends "base.html" %}
+            {% import "package-macros" as package_macros %}
+            {% block body %}{% include "package-table" %}{% endblock %}
         "#;
         pub(super) const TEMPLATES: &[(&str, &str)] = &[
             ("package-macros", PACKAGE_MACROS),
             ("package-table", PACKAGE_TABLE),
             ("search-form", SEARCH_FORM),
+            ("base.html", BASE_TMPL),
             ("index.html", INDEX_TMPL),
             ("package.html", PACKAGE_TMPL),
         ];
