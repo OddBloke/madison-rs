@@ -7,7 +7,10 @@ use std::{
 use log::info;
 use rocket::{Build, Rocket};
 use rocket_dyn_templates::Template;
-use rocket_prometheus::{prometheus::IntCounter, PrometheusMetrics};
+use rocket_prometheus::{
+    prometheus::{opts, IntCounter, IntCounterVec},
+    PrometheusMetrics,
+};
 use tokio::time::sleep;
 
 use crate::{
@@ -21,6 +24,7 @@ mod templates;
 struct MadisonMetrics {
     update_attempts: IntCounter,
     update_failures: IntCounter,
+    package_lookups: IntCounterVec,
 }
 
 impl MadisonMetrics {
@@ -34,6 +38,13 @@ impl MadisonMetrics {
                 "madison_rs_apt_update_failures",
                 "Count of failed system apt update attempts",
             )?,
+            package_lookups: IntCounterVec::new(
+                opts!(
+                    "madison_rs_package_lookups",
+                    "Count of packages looked up, and how"
+                ),
+                &["route", "package_name"],
+            )?,
         })
     }
 
@@ -41,6 +52,7 @@ impl MadisonMetrics {
         let registry = prometheus.registry();
         registry.register(Box::new(self.update_attempts))?;
         registry.register(Box::new(self.update_failures))?;
+        registry.register(Box::new(self.package_lookups))?;
         Ok(())
     }
 }
@@ -60,13 +72,20 @@ async fn madison(
     package: String,
     s: Option<String>,
     state: &rocket::State<MadisonState>,
+    metrics: &rocket::State<MadisonMetrics>,
 ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
     let ro_mapping = state.madison_mapping.read().expect("read access failed");
-    Ok(do_madison(
-        &ro_mapping,
-        package.split(" ").map(|s| s.to_string()).collect(),
-        s,
-    ))
+    let packages: Vec<String> = package
+        .split(" ")
+        .map(|s| {
+            metrics
+                .package_lookups
+                .with_label_values(&["rmadison", s])
+                .inc();
+            s.to_string()
+        })
+        .collect();
+    Ok(do_madison(&ro_mapping, packages, s))
 }
 
 #[get("/?<package>&<s>")]
@@ -74,16 +93,23 @@ async fn madison_html(
     package: String,
     s: Option<String>,
     state: &rocket::State<MadisonState>,
+    metrics: &rocket::State<MadisonMetrics>,
 ) -> Template {
     let mut context = HashMap::new();
     let ro_mapping = state.madison_mapping.read().expect("read access failed");
+    let packages: Vec<String> = package
+        .split(" ")
+        .map(|s| {
+            metrics
+                .package_lookups
+                .with_label_values(&["html", s])
+                .inc();
+            s.to_string()
+        })
+        .collect();
     context.insert(
         "madison",
-        generate_madison_structure(
-            &ro_mapping,
-            &package.split(" ").map(|s| s.to_string()).collect(),
-            s,
-        ),
+        generate_madison_structure(&ro_mapping, &packages, s),
     );
     Template::render("package.html", &context)
 }
@@ -151,8 +177,11 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
         }));
     if config.enable_metrics {
         let prometheus = PrometheusMetrics::new();
-        metrics.register_with(&prometheus).unwrap();
-        app = app.attach(prometheus.clone()).mount("/metrics", prometheus)
+        metrics.clone().register_with(&prometheus).unwrap();
+        app = app
+            .attach(prometheus.clone())
+            .mount("/metrics", prometheus)
+            .manage(metrics)
     }
     app
 }
