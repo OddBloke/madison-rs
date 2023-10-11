@@ -81,7 +81,13 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
         loop {
             sleep(Duration::from_secs(60)).await;
             info!("Checking for updates");
-            let did_update = system.update().await.unwrap();
+            let did_update = match system.update().await {
+                Ok(val) => val,
+                Err(e) => {
+                    warn!("Encountered error when updating: {}", e);
+                    false
+                }
+            };
             if did_update {
                 info!("Update happened: updating mapping");
                 let new_mapping =
