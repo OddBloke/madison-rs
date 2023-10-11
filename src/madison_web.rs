@@ -7,7 +7,7 @@ use std::{
 use log::info;
 use rocket::{Build, Rocket};
 use rocket_dyn_templates::Template;
-use rocket_prometheus::PrometheusMetrics;
+use rocket_prometheus::{prometheus::IntCounter, PrometheusMetrics};
 use tokio::time::sleep;
 
 use crate::{
@@ -16,6 +16,34 @@ use crate::{
 };
 
 mod templates;
+
+#[derive(Clone)]
+struct MadisonMetrics {
+    update_attempts: IntCounter,
+    update_failures: IntCounter,
+}
+
+impl MadisonMetrics {
+    fn new() -> Result<Self, anyhow::Error> {
+        Ok(Self {
+            update_attempts: IntCounter::new(
+                "madison_rs_apt_update_attempts",
+                "Count of system apt update attempts",
+            )?,
+            update_failures: IntCounter::new(
+                "madison_rs_apt_update_failures",
+                "Count of failed system apt update attempts",
+            )?,
+        })
+    }
+
+    fn register_with(self, prometheus: &PrometheusMetrics) -> Result<(), anyhow::Error> {
+        let registry = prometheus.registry();
+        registry.register(Box::new(self.update_attempts))?;
+        registry.register(Box::new(self.update_failures))?;
+        Ok(())
+    }
+}
 
 struct MadisonState {
     madison_mapping: Arc<RwLock<MadisonMapping>>,
@@ -64,11 +92,13 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
     let rocket = rocket::build();
     let figment = rocket.figment();
     let config: MadisonConfig = figment.extract().expect("config");
+    let metrics = MadisonMetrics::new().unwrap();
 
     let system = init_system(&config).await.expect("fapt System init");
 
     let mapping_lock = Arc::new(RwLock::new(HashMap::new()));
     let c_lock = mapping_lock.clone();
+    let task_metrics = metrics.clone();
     tokio::task::spawn(async move {
         {
             // Take the lock immediately for initialisation
@@ -81,9 +111,11 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
         loop {
             sleep(Duration::from_secs(60)).await;
             info!("Checking for updates");
+            task_metrics.update_attempts.inc();
             let did_update = match system.update().await {
                 Ok(val) => val,
                 Err(e) => {
+                    task_metrics.update_failures.inc();
                     warn!("Encountered error when updating: {}", e);
                     false
                 }
@@ -119,6 +151,7 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
         }));
     if config.enable_metrics {
         let prometheus = PrometheusMetrics::new();
+        metrics.register_with(&prometheus).unwrap();
         app = app.attach(prometheus.clone()).mount("/metrics", prometheus)
     }
     app
