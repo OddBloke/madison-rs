@@ -67,6 +67,19 @@ async fn index() -> Template {
     Template::render("index.html", &context)
 }
 
+fn get_packages(package_str: String, metrics: &MadisonMetrics, source: &str) -> Vec<String> {
+    package_str
+        .split(" ")
+        .map(|s| {
+            metrics
+                .package_lookups
+                .with_label_values(&[source, s])
+                .inc();
+            s.to_string()
+        })
+        .collect()
+}
+
 #[get("/?<package>&text=on&<s>")]
 async fn madison(
     package: String,
@@ -74,18 +87,11 @@ async fn madison(
     state: &rocket::State<MadisonState>,
     metrics: &rocket::State<MadisonMetrics>,
 ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
-    let ro_mapping = state.madison_mapping.read().expect("read access failed");
-    let packages: Vec<String> = package
-        .split(" ")
-        .map(|s| {
-            metrics
-                .package_lookups
-                .with_label_values(&["rmadison", s])
-                .inc();
-            s.to_string()
-        })
-        .collect();
-    Ok(do_madison(&ro_mapping, packages, s))
+    Ok(do_madison(
+        &state.madison_mapping.read().expect("read access failed"),
+        get_packages(package, metrics, "rmadison"),
+        s,
+    ))
 }
 
 #[get("/?<package>&<s>")]
@@ -97,16 +103,7 @@ async fn madison_html(
 ) -> Template {
     let mut context = HashMap::new();
     let ro_mapping = state.madison_mapping.read().expect("read access failed");
-    let packages: Vec<String> = package
-        .split(" ")
-        .map(|s| {
-            metrics
-                .package_lookups
-                .with_label_values(&["html", s])
-                .inc();
-            s.to_string()
-        })
-        .collect();
+    let packages = get_packages(package, metrics, "html");
     context.insert(
         "madison",
         generate_madison_structure(&ro_mapping, &packages, s),
