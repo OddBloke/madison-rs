@@ -21,6 +21,7 @@ use rayon::prelude::*;
 pub mod madison_web;
 
 pub type MadisonMapping = HashMap<String, HashMap<(String, String), HashSet<String>>>;
+pub type MadisonStructure = HashMap<String, Vec<MadisonOutputRecord>>;
 
 #[derive(Deserialize)]
 pub struct MadisonConfig {
@@ -159,7 +160,7 @@ pub fn generate_madison_structure(
     madison_mapping: &MadisonMapping,
     packages: &Vec<String>,
     suite: Option<String>,
-) -> HashMap<String, Vec<MadisonOutputRecord>> {
+) -> MadisonStructure {
     packages
         .par_iter()
         .filter_map(|package| {
