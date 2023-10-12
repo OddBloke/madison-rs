@@ -209,12 +209,7 @@ pub fn generate_madison_structure(
         .collect()
 }
 
-pub fn do_madison(
-    madison_mapping: &MadisonMapping,
-    packages: Vec<String>,
-    suite: Option<String>,
-) -> String {
-    let mut package_lines = generate_madison_structure(madison_mapping, &packages, suite);
+pub fn do_madison(package_lines: &mut MadisonStructure, packages: Vec<String>) -> String {
     let mut output_builder = Builder::default();
     for package in packages {
         let merged_vec = if let Some(merged_vec) = package_lines.remove(&package) {
@@ -258,7 +253,10 @@ pub mod madison_cli {
     use figment::Figment;
     use serde::Deserialize;
 
-    use crate::{build_madison_mapping, do_madison, init_system, key_func, MadisonConfig};
+    use crate::{
+        build_madison_mapping, do_madison, generate_madison_structure, init_system, key_func,
+        MadisonConfig,
+    };
 
     #[derive(Deserialize)]
     struct CliConfig {
@@ -275,6 +273,8 @@ pub mod madison_cli {
         let system = init_system(&config.global).await.expect("fapt System init");
         let madison_mapping =
             build_madison_mapping(&system, key_func).expect("build madison mapping");
-        print!("{}", do_madison(&madison_mapping, vec![package], None));
+        let packages = vec![package];
+        let mut madison = generate_madison_structure(&madison_mapping, &packages, None);
+        print!("{}", do_madison(&mut madison, packages));
     }
 }

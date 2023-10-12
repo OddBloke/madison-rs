@@ -87,11 +87,10 @@ async fn madison(
     state: &rocket::State<MadisonState>,
     metrics: &rocket::State<MadisonMetrics>,
 ) -> Result<String, rocket::response::Debug<anyhow::Error>> {
-    Ok(do_madison(
-        &state.madison_mapping.read().expect("read access failed"),
-        get_packages(package, metrics, "rmadison"),
-        s,
-    ))
+    let ro_mapping = state.madison_mapping.read().expect("read access failed");
+    let packages = get_packages(package, metrics, "rmadison");
+    let mut madison = generate_madison_structure(&ro_mapping, &packages, s);
+    Ok(do_madison(&mut madison, packages))
 }
 
 #[get("/?<package>&<s>")]
