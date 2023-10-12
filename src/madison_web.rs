@@ -6,7 +6,7 @@ use std::{
 
 use log::info;
 use rocket::{Build, Rocket};
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{context, Template};
 use rocket_prometheus::{
     prometheus::{opts, IntCounter, IntCounterVec},
     PrometheusMetrics,
@@ -101,14 +101,12 @@ async fn madison_html(
     state: &rocket::State<MadisonState>,
     metrics: &rocket::State<MadisonMetrics>,
 ) -> Template {
-    let mut context = HashMap::new();
     let ro_mapping = state.madison_mapping.read().expect("read access failed");
     let packages = get_packages(package, metrics, "html");
-    context.insert(
-        "madison",
-        generate_madison_structure(&ro_mapping, &packages, s),
-    );
-    Template::render("package.html", &context)
+    Template::render(
+        "package.html",
+        context! {madison: generate_madison_structure(&ro_mapping, &packages, s)},
+    )
 }
 
 pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
