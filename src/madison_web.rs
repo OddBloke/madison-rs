@@ -25,6 +25,7 @@ struct MadisonMetrics {
     update_attempts: IntCounter,
     update_failures: IntCounter,
     package_lookups: IntCounterVec,
+    mapping_rebuilds: IntCounter,
 }
 
 impl MadisonMetrics {
@@ -45,6 +46,10 @@ impl MadisonMetrics {
                 ),
                 &["route", "package_name"],
             )?,
+            mapping_rebuilds: IntCounter::new(
+                "madison_rs_mapping_rebuilds",
+                "Count of rebuilds of the internal madison mapping",
+            )?,
         })
     }
 
@@ -53,6 +58,7 @@ impl MadisonMetrics {
         registry.register(Box::new(self.update_attempts))?;
         registry.register(Box::new(self.update_failures))?;
         registry.register(Box::new(self.package_lookups))?;
+        registry.register(Box::new(self.mapping_rebuilds))?;
         Ok(())
     }
 }
@@ -146,7 +152,8 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
                     build_madison_mapping(&system, key_func, config.include_source_arch)
                         .expect("build_madison_mapping");
                 let mut madison_mapping = c_lock.write().expect("write access failed");
-                *madison_mapping = new_mapping
+                *madison_mapping = new_mapping;
+                task_metrics.mapping_rebuilds.inc();
             }
         }
     });
