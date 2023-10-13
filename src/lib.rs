@@ -134,15 +134,8 @@ fn build_madison_mapping(
                 }
             }
             Ok(versions
-                .iter()
-                .map(|(package_name, (version, types))| {
-                    (
-                        package_name.clone(),
-                        key.clone(),
-                        version.clone(),
-                        types.clone(),
-                    )
-                })
+                .into_iter()
+                .map(|(package_name, (version, types))| (package_name, key.clone(), version, types))
                 .collect())
         })
         .collect::<Result<_, _>>()?;
@@ -197,7 +190,7 @@ pub fn generate_madison_structure(
                     // Start with "source", append sorted architectures, join with ", "
                     let mut types = types.clone();
                     let mut type_parts: Vec<_> = types.take("source").into_iter().collect();
-                    let mut arch_parts = types.iter().map(|s| s.clone()).collect::<Vec<_>>();
+                    let mut arch_parts: Vec<_> = types.into_iter().collect();
                     arch_parts.sort();
                     type_parts.extend(arch_parts);
                     MadisonOutputRecord::new(
