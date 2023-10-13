@@ -28,6 +28,7 @@ pub struct MadisonConfig {
     pub sources_list: String,
     pub extra_key_paths: Vec<String>,
     pub arches: Vec<String>,
+    pub include_source_arch: bool,
     // TODO: This is madison-web specific
     pub enable_metrics: bool,
 }
@@ -84,6 +85,7 @@ pub async fn init_system(config: &MadisonConfig) -> Result<System, anyhow::Error
 fn build_madison_mapping(
     system: &System,
     key_func: &key_func::KeyFunc,
+    include_source_arch: bool,
 ) -> Result<MadisonMapping, anyhow::Error> {
     // Collect all the versions
     let versions: Vec<Vec<_>> = system
@@ -96,13 +98,15 @@ fn build_madison_mapping(
                 let pkg = section?.as_pkg()?;
                 if let Some(bin) = pkg.as_bin() {
                     let mut pkg_types = HashMap::new();
-                    pkg_types
-                        .entry(match bin.source.as_ref() {
-                            Some(source_pkg_name) => source_pkg_name.clone(),
-                            None => pkg.name.clone(),
-                        })
-                        .or_insert(HashSet::new())
-                        .insert("source".to_string());
+                    if include_source_arch {
+                        pkg_types
+                            .entry(match bin.source.as_ref() {
+                                Some(source_pkg_name) => source_pkg_name.clone(),
+                                None => pkg.name.clone(),
+                            })
+                            .or_insert(HashSet::new())
+                            .insert("source".to_string());
+                    }
                     pkg_types.entry(pkg.name).or_insert(HashSet::new()).insert(
                         downloaded_list
                             .listing
@@ -272,7 +276,8 @@ pub mod madison_cli {
 
         let system = init_system(&config.global).await.expect("fapt System init");
         let madison_mapping =
-            build_madison_mapping(&system, key_func).expect("build madison mapping");
+            build_madison_mapping(&system, key_func, config.global.include_source_arch)
+                .expect("build madison mapping");
         let packages = vec![package];
         let mut madison = generate_madison_structure(&madison_mapping, &packages, None);
         print!("{}", do_madison(&mut madison, packages));

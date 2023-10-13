@@ -10,6 +10,7 @@ arches = [
      "riscv64",
      "s390x",
 ]
+include_source_arch = true
 port = 9393
 template_dir = "."
 enable_metrics = false

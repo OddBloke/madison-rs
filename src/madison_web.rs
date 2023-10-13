@@ -124,8 +124,8 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
             // Take the lock immediately for initialisation
             let mut madison_mapping = c_lock.write().expect("write access failed");
             info!("Initialising madison mapping");
-            *madison_mapping =
-                build_madison_mapping(&system, key_func).expect("build_madison_mapping");
+            *madison_mapping = build_madison_mapping(&system, key_func, config.include_source_arch)
+                .expect("build_madison_mapping");
         }
 
         loop {
@@ -143,7 +143,8 @@ pub async fn rocket(key_func: &'static key_func::KeyFunc) -> Rocket<Build> {
             if did_update {
                 info!("Update happened: updating mapping");
                 let new_mapping =
-                    build_madison_mapping(&system, key_func).expect("build_madison_mapping");
+                    build_madison_mapping(&system, key_func, config.include_source_arch)
+                        .expect("build_madison_mapping");
                 let mut madison_mapping = c_lock.write().expect("write access failed");
                 *madison_mapping = new_mapping
             }
